@@ -13,7 +13,7 @@ public class Main extends Application {
     public void start(Stage stage) throws Exception {
 
         // Carrega l'única vista de l'exemple
-        Parent root = FXMLLoader.load(getClass().getResource("/assets/layout.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("/assets/game.fxml"));
         Scene scene = new Scene(root);
 
         stage.setScene(scene);

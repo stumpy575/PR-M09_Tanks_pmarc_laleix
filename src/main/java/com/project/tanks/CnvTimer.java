@@ -1,4 +1,4 @@
-package com.project;
+package com.project.tanks;
 
 import java.util.function.Consumer;
 import javafx.animation.AnimationTimer;

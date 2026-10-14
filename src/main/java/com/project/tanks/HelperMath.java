@@ -1,4 +1,4 @@
-package com.project;
+package com.project.tanks;
 
 import javafx.geometry.Point2D;
 

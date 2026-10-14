@@ -1,5 +1,8 @@
 package com.project;
 
+import com.project.tanks.Bullet;
+import com.project.tanks.HelperCollisions;
+
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 

@@ -1,4 +1,4 @@
-package com.project;
+package com.project.tanks;
 
 import java.net.URL;
 import java.util.ArrayList;
