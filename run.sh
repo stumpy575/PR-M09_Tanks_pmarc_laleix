@@ -2,7 +2,7 @@
 set -e
 
 cd "$(dirname "$0")"
-mainClass=${1:-com.project.Main}
+mainClass=${1:-com.project.client.Main}
 
 # Maven descarrega JavaFX i compila el projecte
 mvn compile
