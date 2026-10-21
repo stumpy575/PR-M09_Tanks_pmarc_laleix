@@ -17,6 +17,7 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Main extends WebSocketServer {
@@ -24,11 +25,11 @@ public class Main extends WebSocketServer {
     public static final int DEFAULT_PORT = 3000;
 
     private static final List<String> PLAYER_NAMES = Arrays.asList(
-        "Jugador 1", "Jugador 2"
+            "Jugador 1", "Jugador 2"
     );
 
     private static final List<String> PLAYER_COLORS = Arrays.asList(
-        "GREEN", "ORANGE"
+            "GREEN", "ORANGE"
     );
 
     private static final int REQUIRED_CLIENTS = 2;
@@ -74,15 +75,21 @@ public class Main extends WebSocketServer {
 
     private String getColorForName(String name) {
         int idx = PLAYER_NAMES.indexOf(name);
-        if (idx < 0) idx = 0;
+        if (idx < 0) {
+            idx = 0;
+        }
         return PLAYER_COLORS.get(idx % PLAYER_COLORS.size());
     }
 
     // compte enrere que inicia la partida
     private void sendCountdown() {
         synchronized (this) {
-            if (countdownRunning) return;
-            if (clients.snapshot().size() != REQUIRED_CLIENTS) return;
+            if (countdownRunning) {
+                return;
+            }
+            if (clients.snapshot().size() != REQUIRED_CLIENTS) {
+                return;
+            }
             countdownRunning = true;
         }
 
@@ -95,7 +102,9 @@ public class Main extends WebSocketServer {
                         break; // si es desconecta un client es cancela el compte enrere
                     }
                     sendCountdownToAll(i);
-                    if (i > 0) Thread.sleep(750);
+                    if (i > 0) {
+                        Thread.sleep(750);
+                    }
                 }
             } catch (InterruptedException ie) {
                 completed = false;
@@ -113,18 +122,21 @@ public class Main extends WebSocketServer {
         }, "CountdownThread").start();
     }
 
-
     private static JSONObject msg(String type) {
         return new JSONObject().put(K_TYPE, type);
     }
 
     private void sendSafe(WebSocket to, String payload) {
-        if (to == null) return;
+        if (to == null) {
+            return;
+        }
         try {
             to.send(payload);
         } catch (WebsocketNotConnectedException e) {
             String name = clients.cleanupDisconnected(to);
-            if (name != null) game.removePlayer(name);
+            if (name != null) {
+                game.removePlayer(name);
+            }
             System.out.println("Client desconnectat durant send: " + name);
         } catch (Exception e) {
             e.printStackTrace();
@@ -134,7 +146,9 @@ public class Main extends WebSocketServer {
     private void broadcastExcept(WebSocket sender, String payload) {
         for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
             WebSocket conn = e.getKey();
-            if (!Objects.equals(conn, sender)) sendSafe(conn, payload);
+            if (!Objects.equals(conn, sender)) {
+                sendSafe(conn, payload);
+            }
         }
     }
 
@@ -149,7 +163,9 @@ public class Main extends WebSocketServer {
 
     private void broadcastStatus() {
         JSONObject rst = msg(T_SERVER_DATA).put(K_TANKS, game.tanksToJSON());
-
+        List<String> names = new ArrayList<>(clients.snapshot().values());
+        Collections.sort(names);
+        rst.put("players", new JSONArray(names));
         for (WebSocket conn : clients.snapshot().keySet()) {
             rst.put(K_CLIENT_NAME, clients.nameBySocket(conn));
             sendSafe(conn, rst.toString());
@@ -159,7 +175,6 @@ public class Main extends WebSocketServer {
     private void broadcastGameOver(String winner) {
         broadcastExcept(null, msg(T_GAME_OVER).put(K_WINNER, winner).toString());
     }
-
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
@@ -194,12 +209,16 @@ public class Main extends WebSocketServer {
         }
 
         String name = clients.nameBySocket(conn);
-        if (name == null) return;
+        if (name == null) {
+            return;
+        }
 
         switch (obj.optString(K_TYPE, "")) {
             case T_TANK_STATE -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
-                if (value != null) game.setTankState(name, value);
+                if (value != null) {
+                    game.setTankState(name, value);
+                }
             }
             case T_HIT -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
@@ -222,7 +241,6 @@ public class Main extends WebSocketServer {
         setConnectionLostTimeout(100);
         startTicker();
     }
-
 
     private void startTicker() {
         long periodMs = Math.max(1, 1000 / TICK_FPS);
@@ -252,7 +270,6 @@ public class Main extends WebSocketServer {
             Thread.currentThread().interrupt();
         }
     }
-
 
     private static void registerShutdownHook(Main server) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -1,6 +1,7 @@
-package com.project.tanks;
+package com.project.client;
 
 import java.util.function.Consumer;
+
 import javafx.animation.AnimationTimer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;

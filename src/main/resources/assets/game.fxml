@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/22"
       xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.project.tanks.Controller">
+      fx:controller="com.project.client.Controller">
     <children>
         <Canvas fx:id="canvas" width="800.0" height="500.0" />
         <Label text="Fletxes o WASD: moure el tanc · Ratolí: apuntar · Clic: disparar · R: reiniciar"

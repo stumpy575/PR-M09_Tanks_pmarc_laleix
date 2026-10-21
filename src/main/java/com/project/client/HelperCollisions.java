@@ -1,4 +1,4 @@
-package com.project.tanks;
+package com.project.client;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;

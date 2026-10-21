@@ -1,4 +1,4 @@
-package com.project.tanks;
+package com.project.client;
 
 import java.util.List;
 

@@ -1,7 +1,7 @@
 package com.project;
 
-import com.project.tanks.Bullet;
-import com.project.tanks.HelperCollisions;
+import com.project.client.Bullet;
+import com.project.client.HelperCollisions;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
