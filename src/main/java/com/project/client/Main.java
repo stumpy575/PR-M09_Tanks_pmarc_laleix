@@ -22,7 +22,7 @@ public class Main extends Application {
         UtilsViews.parentContainer.setStyle("-fx-font: 14 arial;");
         UtilsViews.addView(getClass(), "ViewConfig", "/assets/viewConfig.fxml"); 
         UtilsViews.addView(getClass(), "ViewWait", "/assets/viewWait.fxml");
-        UtilsViews.addView(getClass(), "ViewPlay", "/assets/viewPlay.fxml");
+        // UtilsViews.addView(getClass(), "ViewPlay", "/assets/Play.fxml");
 
         ctrlConfig = (CtrlConfig) UtilsViews.getController("ViewConfig");
         ctrlWait = (CtrlWait) UtilsViews.getController("ViewWait");
