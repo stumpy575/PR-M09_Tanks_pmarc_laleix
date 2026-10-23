@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
-$mainClass = if ($args.Count -gt 0) { $args[0] } else { "com.project.Main" }
+$mainClass = if ($args.Count -gt 0) { $args[0] } else { "com.project.client.Main" }
 
 # Maven descarrega JavaFX i compila el projecte
 mvn compile
