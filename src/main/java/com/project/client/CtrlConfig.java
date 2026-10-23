@@ -26,11 +26,11 @@ public class CtrlConfig implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
     }
 
-    // REVISAR
-    //@FXML
-    //private void connectToServer() {
-    //    Main.connectToServer();
-    //}
+    @FXML
+    private void connectToServer() {
+        // REVISAR
+        // Main.connectToServer();
+    }
 
     @FXML
     private void setConfigLocal() {
