@@ -124,7 +124,14 @@ public class CtrlConfig implements Initializable {
                 // Cuando el servidor indique que empieza la partida
                 else if ("gameStart".equals(obj.optString("type"))) {
                 
+                    int playerNumber = obj.optInt("playerNumber", -1);
+
+                    System.out.println(
+                        "DEBUG: gameStart recibido. playerNumber = " + playerNumber
+                    );
+                
                     Platform.runLater(() -> {
+                        Main.ctrlPlay.setPlayerNumber(playerNumber);
                         UtilsViews.setView("ViewPlay");
                     });
                 }

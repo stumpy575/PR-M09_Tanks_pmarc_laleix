@@ -52,6 +52,19 @@ class Tank extends ObjectDynamic {
         alive = true;
     }
 
+    // Actualizar el estado del tanque con los datos recibidos del servidor.
+    void updateState(Point2D position, double angle, double turretAngle, boolean alive) {
+        setPosition(position);
+        setAngle(angle);
+        this.turretAngle = turretAngle;
+    
+        if (alive) {
+            this.alive = true;
+        } else {
+            destroy();
+        }
+    }
+
     // Actualitza l'angle i la velocitat a partir de la direcció demanada.
     // El cos del tanc s'orienta cap on es mou; sense direcció, s'atura.
     void updateMovement(Point2D direction, double speed) {

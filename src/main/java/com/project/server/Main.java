@@ -29,7 +29,7 @@ public class Main extends WebSocketServer {
     );
 
     private static final List<String> PLAYER_COLORS = Arrays.asList(
-            "GREEN", "ORANGE"
+            "BLUE", "RED"
     );
 
     private static final int REQUIRED_CLIENTS = 2;
@@ -73,12 +73,14 @@ public class Main extends WebSocketServer {
         this.ticker = Executors.newSingleThreadScheduledExecutor(tf);
     }
 
-    private String getColorForName(String name) {
-        int idx = PLAYER_NAMES.indexOf(name);
-        if (idx < 0) {
-            idx = 0;
+    private String getColorForSocket(WebSocket socket) {
+        int playerNumber = clients.playerNumber(socket);
+
+        if (playerNumber < 0 || playerNumber >= PLAYER_COLORS.size()) {
+            return "GRAY";
         }
-        return PLAYER_COLORS.get(idx % PLAYER_COLORS.size());
+
+        return PLAYER_COLORS.get(playerNumber);
     }
 
     // compte enrere que inicia la partida
@@ -114,9 +116,27 @@ public class Main extends WebSocketServer {
             }
 
             if (completed) {
-                List<String> names = new ArrayList<>(clients.snapshot().values());
-                Collections.sort(names);
-                game.start(names, name -> getColorForName(name));
+                List<Map.Entry<WebSocket, String>> connectedPlayers =
+                        new ArrayList<>(clients.snapshot().entrySet());
+            
+                connectedPlayers.sort(
+                        (a, b) -> Integer.compare(
+                                clients.playerNumber(a.getKey()),
+                                clients.playerNumber(b.getKey())
+                        )
+                );
+            
+                List<String> names = new ArrayList<>();
+            
+                for (Map.Entry<WebSocket, String> player : connectedPlayers) {
+                    names.add(player.getValue());
+                }
+            
+                game.start(names, name -> {
+                    WebSocket socket = clients.socketByName(name);
+                    return getColorForSocket(socket);
+                });
+            
                 broadcastGameStart();
             }
         }, "CountdownThread").start();
@@ -157,8 +177,17 @@ public class Main extends WebSocketServer {
     }
 
     private void broadcastGameStart() {
-        JSONObject rst = msg(T_GAME_START).put(K_SEED, game.getSeed());
-        broadcastExcept(null, rst.toString());
+        System.out.println("DEBUG: broadcastGameStart() ejecutado");
+
+        for (Map.Entry<WebSocket, String> player : clients.snapshot().entrySet()) {
+            WebSocket socket = player.getKey();
+
+            JSONObject rst = msg(T_GAME_START)
+                    .put(K_SEED, game.getSeed())
+                    .put("playerNumber", clients.playerNumber(socket));
+
+            sendSafe(socket, rst.toString());
+        }
     }
 
     private void broadcastStatus() {
@@ -186,7 +215,7 @@ public class Main extends WebSocketServer {
         }
 
         String name = clients.add(conn);
-        System.out.println("WebSocket client connected: " + name + " (" + getColorForName(name) + ")");
+        System.out.println("WebSocket client connected: " + name + " (" + getColorForSocket(conn) + ")");
         sendCountdown();
     }
 

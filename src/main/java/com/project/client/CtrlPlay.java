@@ -51,9 +51,63 @@ public class CtrlPlay implements Initializable {
     private final List<Explosion> explosions = new ArrayList<>();
     private final Set<KeyCode> pressedKeys = EnumSet.noneOf(KeyCode.class);
 
-    private final Tank tank = new Tank(new Point2D(90, 250), 0, 0, Color.DODGERBLUE);
-    private final Tank enemy = new Tank(new Point2D(710, 250), 180, 180, Color.DARKGOLDENROD);
+    private Tank tank;
+    private Tank enemy;
     private final Target target = new Target();
+
+    // Número de jugador asignado por el servidor:
+    // 0 = primer jugador, 1 = segundo jugador.
+    private int playerNumber = -1;
+
+    // Guardar el número de jugador recibido del servidor.
+    public void setPlayerNumber(int playerNumber) {
+        if (playerNumber != 0 && playerNumber != 1) {
+            System.out.println("Número de jugador no válido: " + playerNumber);
+            return;
+        }
+    
+        this.playerNumber = playerNumber;
+    
+        if (playerNumber == 0) {
+            tank = new Tank(
+                    new Point2D(90, 250),
+                    0,
+                    0,
+                    Color.BLUE
+            );
+        
+            enemy = new Tank(
+                    new Point2D(710, 250),
+                    180,
+                    180,
+                    Color.RED
+            );
+        } else {
+            tank = new Tank(
+                    new Point2D(710, 250),
+                    180,
+                    180,
+                    Color.RED
+            );
+        
+            enemy = new Tank(
+                    new Point2D(90, 250),
+                    0,
+                    0,
+                    Color.BLUE
+            );
+        }
+    
+        System.out.println("Número de jugador asignado: " + playerNumber);
+
+        // Reiniciar el tiempo y dibujar el tablero con los tanques creados.
+        lastRunNanos = 0;
+        redraw();
+
+        System.out.println("DEBUG: tank = " + tank);
+        System.out.println("DEBUG: enemy = " + enemy);
+        System.out.println("DEBUG: redraw ejecutado tras crear los tanques");        
+    }
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -120,13 +174,24 @@ public class CtrlPlay implements Initializable {
         bullets.clear();
         explosions.clear();
 
-        // Iniciar tancs
-        tank.reset(new Point2D(90, 250), 0, 0);
-        enemy.reset(new Point2D(710, 250), 180, 180);
-
-        // Iniciar punt de mira
-        target.setPosition(enemy.getPosition().getX(), enemy.getPosition().getY());
-        tank.pointAt(target.getPosition());
+        // Reiniciar els tancs només si el servidor ja ha assignat el jugador.
+        if (tank != null && enemy != null) {
+            if (playerNumber == 0) {
+                tank.reset(new Point2D(90, 250), 0, 0);
+                enemy.reset(new Point2D(710, 250), 180, 180);
+            } else if (playerNumber == 1) {
+                tank.reset(new Point2D(710, 250), 180, 180);
+                enemy.reset(new Point2D(90, 250), 0, 0);
+            }
+        
+            // Iniciar el punt de mira cap al tanc rival.
+            target.setPosition(
+                    enemy.getPosition().getX(),
+                    enemy.getPosition().getY()
+            );
+        
+            tank.pointAt(target.getPosition());
+        }
 
         // Reprendre el joc després de reiniciar-lo amb R
         if (timer != null) timer.start();
@@ -143,7 +208,11 @@ public class CtrlPlay implements Initializable {
         // Per disparar una bala:
         // - el tanc ha d'estar viu
         // - no hi pot haver més de MAX_BULLETS bales disparades al mateix temps
-        if (!tank.isAlive() || bullets.size() >= MAX_BULLETS) return;
+        if (tank == null || enemy == null
+                || !tank.isAlive()
+                || bullets.size() >= MAX_BULLETS) {
+            return;
+        }
 
         // Apuntar des de la posició actual del tanc abans de disparar
         tank.pointAt(target.getPosition());
@@ -155,6 +224,12 @@ public class CtrlPlay implements Initializable {
 
     // Actualitzar la lògica del joc (run)
     private void update() {
+
+        // Esperar que el servidor assigni el jugador i es creïn els tancs.
+        if (tank == null || enemy == null) {
+            return;
+        }
+
         double dt = calculateDt();
         if (dt <= 0) return;
 
@@ -315,15 +390,17 @@ public class CtrlPlay implements Initializable {
         // Dibuix de les bales
         for (Bullet bullet : bullets) bullet.draw(gc);
 
-        // Dibuix dels tancs
-        tank.draw(gc);
-        enemy.draw(gc);
+        // Dibuix dels tancs, només si ja s'han creat.
+        if (tank != null && enemy != null) {
+            tank.draw(gc);
+            enemy.draw(gc);
+        }
 
         // Dibuix explosions
         for (Explosion explosion : explosions) explosion.draw(gc);
 
-        // Dibuix del canó i del punt de mira
-        if (tank.isAlive()) {
+        // Dibuix del canó i del punt de mira, només si el tanc existeix.
+        if (tank != null && tank.isAlive()) {
             target.drawGuide(gc, tank, staticObjects);
             target.draw(gc, tank);
         }

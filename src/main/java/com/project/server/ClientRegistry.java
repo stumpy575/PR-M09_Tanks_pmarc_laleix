@@ -34,6 +34,9 @@ final class ClientRegistry {
     /** Cua de noms disponibles per assignar. */
     private final Queue<String> pool = new ConcurrentLinkedQueue<>();
 
+    // Guarda el número de jugador asignado a cada conexión
+    private final Map<WebSocket, Integer> playerNumbers = new ConcurrentHashMap<>();
+
     /** Llista base de noms per reomplir el pool quan s'esgoti. */
     private final List<String> seedNames;
 
@@ -87,10 +90,23 @@ final class ClientRegistry {
      * @param socket socket del client connectat
      * @return el nom assignat al client
      */
-    String add(WebSocket socket) {
+    synchronized String add(WebSocket socket) {
+
+        // Comprobar qué números de jugador están ocupados
+        int number = 0;
+
+        while (playerNumbers.containsValue(number)) {
+            number++;
+        }
+
+        // Guardar el número del jugador
+        playerNumbers.put(socket, number);
+
+        // Asignar el nombre provisional
         String name = takeOrRecycle();
         bySocket.put(socket, name);
         byName.put(name, socket);
+
         return name;
     }
 
@@ -128,12 +144,19 @@ final class ClientRegistry {
      * @param socket socket del client a eliminar
      * @return el nom que estava assignat, o null si no existia
      */
-    String remove(WebSocket socket) {
+    synchronized String remove(WebSocket socket) {
+    
+        // Liberar el número del jugador
+        playerNumbers.remove(socket);
+    
+        // Eliminar el nombre del jugador
         String name = bySocket.remove(socket);
+    
         if (name != null) {
             byName.remove(name);
             giveBack(name);
         }
+    
         return name;
     }
 
@@ -168,6 +191,10 @@ final class ClientRegistry {
             arr.put(n);
         }
         return arr;
+    }
+
+    int playerNumber(WebSocket socket) {
+        return playerNumbers.getOrDefault(socket, -1);
     }
 
     /**
