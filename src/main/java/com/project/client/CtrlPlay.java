@@ -2,11 +2,13 @@ package com.project.client;
 
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -18,7 +20,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 
+// el controlador envia teclas premudes ratoli i els tirs
 public class CtrlPlay implements Initializable {
 
     @FXML private Canvas canvas;
@@ -26,26 +32,10 @@ public class CtrlPlay implements Initializable {
     private CnvTimer timer;
     private long lastRunNanos;
 
-    // Mides fixes per treballar directament amb les coordenades del Canvas.
-    private static final double WALL = 20;
-    private static final double TANK_SPEED = 140; // píxels/segon
-    private static final double BULLET_SPEED = 360;
-    private static final int MAX_BULLETS = 4;
-    private static final double EXPLOSION_DURATION = 0.6; // segons
+    private static final double EXPLOSION_DURATION = 0.6; // es mesura en segons aixo
 
-    // Nombre de passos petits en què es divideix cada actualització.
-    // Com més passos, menys avancen els objectes cada vegada i més difícil és
-    // que dos objectes ràpids "se saltin" sense detectar el xoc (prova-ho amb 1).
-    private static final int PHYSICS_PRECISION = 10;
+    private static final long AIM_SEND_INTERVAL_NANOS = 33_000_000L;
 
-    // Escollim dos obstacles d'aquesta llista; les posicions no se solapen.
-    private final List<ObjectStatic> obstacleOptions = List.of(
-        new ObjectStatic(260, 100, 60, 100, Color.LIGHTGRAY),
-        new ObjectStatic(260, 300, 60, 100, Color.LIGHTGRAY),
-        new ObjectStatic(370, 170, 60, 160, Color.LIGHTGRAY),
-        new ObjectStatic(480, 100, 60, 100, Color.LIGHTGRAY),
-        new ObjectStatic(480, 300, 60, 100, Color.LIGHTGRAY)
-    );
     private final List<ObjectStatic> staticObjects = new ArrayList<>();
     private final List<Bullet> bullets = new ArrayList<>();
     private final List<Explosion> explosions = new ArrayList<>();
@@ -55,74 +45,123 @@ public class CtrlPlay implements Initializable {
     private Tank enemy;
     private final Target target = new Target();
 
-    // Número de jugador asignado por el servidor:
-    // 0 = primer jugador, 1 = segundo jugador.
     private int playerNumber = -1;
 
-    // Guardar el número de jugador recibido del servidor.
-    public void setPlayerNumber(int playerNumber) {
+    private String gameOverMessage = null;
+
+    // Última entrada enviada, per no enviar el mateix missatge a cada frame
+    private int lastDx = 0, lastDy = 0;
+    private double lastAimX = Double.NaN, lastAimY = Double.NaN;
+    private long lastInputNanos = 0;
+
+    // --- Inici de partida ---
+
+    public void startGame(int playerNumber, JSONArray walls, JSONArray obstacles) {
         if (playerNumber != 0 && playerNumber != 1) {
             System.out.println("Número de jugador no válido: " + playerNumber);
             return;
         }
-    
         this.playerNumber = playerNumber;
-    
-        if (playerNumber == 0) {
-            tank = new Tank(
-                    new Point2D(90, 250),
-                    0,
-                    0,
-                    Color.BLUE
-            );
-        
-            enemy = new Tank(
-                    new Point2D(710, 250),
-                    180,
-                    180,
-                    Color.RED
-            );
-        } else {
-            tank = new Tank(
-                    new Point2D(710, 250),
-                    180,
-                    180,
-                    Color.RED
-            );
-        
-            enemy = new Tank(
-                    new Point2D(90, 250),
-                    0,
-                    0,
-                    Color.BLUE
-            );
-        }
-    
-        System.out.println("Número de jugador asignado: " + playerNumber);
 
-        // Reiniciar el tiempo y dibujar el tablero con los tanques creados.
+        staticObjects.clear();
+        addRects(walls, Color.DIMGRAY);
+        addRects(obstacles, Color.LIGHTGRAY);
+
+        bullets.clear();
+        explosions.clear();
+        pressedKeys.clear();
+        gameOverMessage = null;
         lastRunNanos = 0;
-        redraw();
 
-        System.out.println("DEBUG: tank = " + tank);
-        System.out.println("DEBUG: enemy = " + enemy);
-        System.out.println("DEBUG: redraw ejecutado tras crear los tanques");        
+        Tank blue = new Tank(new Point2D(90, 250), 0, 0, Color.BLUE);
+        Tank red = new Tank(new Point2D(710, 250), 180, 180, Color.RED);
+        tank = playerNumber == 0 ? blue : red;
+        enemy = playerNumber == 0 ? red : blue;
+
+        target.setPosition(enemy.getPosition().getX(), enemy.getPosition().getY());
+        tank.pointAt(target.getPosition());
+
+        lastDx = 0;
+        lastDy = 0;
+        lastAimX = target.getPosition().getX();
+        lastAimY = target.getPosition().getY();
+        lastInputNanos = System.nanoTime();
+
+        System.out.println("Número de jugador asignado: " + playerNumber);
+        redraw();
     }
+
+    private void addRects(JSONArray rects, Color color) {
+        if (rects == null) return;
+        for (int i = 0; i < rects.length(); i++) {
+            JSONObject r = rects.getJSONObject(i);
+            staticObjects.add(new ObjectStatic(
+                    r.getDouble("x"), r.getDouble("y"), r.getDouble("w"), r.getDouble("h"), color));
+        }
+    }
+
+    // --- Missatges del servidor ---
+
+    // aixo es per a l'estat de la partida
+    public void applyState(JSONObject state) {
+        Platform.runLater(() -> applyStateFx(state));
+    }
+
+    public void showGameOver(String winner) {
+        Platform.runLater(() -> {
+            String me = Main.playerName;
+            gameOverMessage = winner != null && winner.equals(me)
+                    ? "¡Has ganado!"
+                    : "Ha ganado " + winner;
+        });
+    }
+
+    private void applyStateFx(JSONObject state) {
+        if (tank == null || enemy == null) return;
+
+        JSONArray tanks = state.optJSONArray("tanks");
+        if (tanks != null) {
+            for (int i = 0; i < tanks.length(); i++) {
+                JSONObject t = tanks.getJSONObject(i);
+                Tank shown = (i == playerNumber) ? tank : enemy;
+                shown.updateState(
+                        new Point2D(t.getDouble("x"), t.getDouble("y")),
+                        t.getDouble("angle"),
+                        t.getDouble("turretAngle"),
+                        t.getBoolean("alive"));
+            }
+            if (tank.isAlive()) tank.pointAt(target.getPosition());
+        }
+
+        bullets.clear();
+        JSONArray bulletsJson = state.optJSONArray("bullets");
+        if (bulletsJson != null) {
+            for (int i = 0; i < bulletsJson.length(); i++) {
+                JSONObject b = bulletsJson.getJSONObject(i);
+                bullets.add(new Bullet(new Point2D(b.getDouble("x"), b.getDouble("y")), b.getDouble("angle")));
+            }
+        }
+
+        JSONArray events = state.optJSONArray("events");
+        if (events != null) {
+            for (int i = 0; i < events.length(); i++) {
+                JSONObject e = events.getJSONObject(i);
+                if ("explosion".equals(e.optString("type"))) {
+                    explosions.add(new Explosion(
+                            e.getDouble("x"), e.getDouble("y"), e.getDouble("r"), EXPLOSION_DURATION));
+                }
+            }
+        }
+    }
+
+    // --- Inicialització i entrada ---
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-
-        // Iniciar el context de dibuix
         gc = canvas.getGraphicsContext2D();
 
-        // Iniciar tauler de joc i objectes
-        resetBoard();
-
-        // Iniciar events
-        // (amb Platform.runLater() per assegurar que ja hi ha escena)
         Platform.runLater(() -> { configureInput(); });
 
-        // Iniciar el temporitzador de dibuix i actualització de l'estat del joc
         timer = new CnvTimer(fps -> update(), this::redraw, 60);
         timer.start();
         redraw();
@@ -130,240 +169,98 @@ public class CtrlPlay implements Initializable {
 
     private void configureInput() {
 
-        // Iniciar events de ratolí
         canvas.setOnMouseMoved(this::updateTarget);
         canvas.setOnMouseDragged(this::updateTarget);
         canvas.setOnMousePressed(event -> {
             updateTarget(event);
-            if (event.getButton() == MouseButton.PRIMARY) fireBullet();
+            if (event.getButton() == MouseButton.PRIMARY) sendShoot();
         });
 
-        // Iniciar events de teclat
-        canvas.getScene().setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.R) resetBoard();
-            else pressedKeys.add(event.getCode());
-        });
+        canvas.getScene().setOnKeyPressed(event -> pressedKeys.add(event.getCode()));
         canvas.getScene().setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));
         canvas.getScene().getWindow().focusedProperty().addListener((obs, old, focused) -> {
             if (!focused) pressedKeys.clear();
         });
     }
 
-    // Iniciar partida
-    private void resetBoard() {
-
-        // Iniciar el temporitzador i les tecles premudes
-        if (timer != null) timer.stop();
-        lastRunNanos = 0;
-        pressedKeys.clear();
-
-        // Iniciar parets
-        double w = canvas.getWidth(), h = canvas.getHeight();
-        staticObjects.clear();
-        staticObjects.add(new ObjectStatic(0, 0, w, WALL, Color.DIMGRAY));
-        staticObjects.add(new ObjectStatic(0, h - WALL, w, WALL, Color.DIMGRAY));
-        staticObjects.add(new ObjectStatic(0, 0, WALL, h, Color.DIMGRAY));
-        staticObjects.add(new ObjectStatic(w - WALL, 0, WALL, h, Color.DIMGRAY));
-
-        // Iniciar obstacles escollint-ne dos aleatòriament de la llista d'opcions
-        List<ObjectStatic> options = new ArrayList<>(obstacleOptions);
-        Collections.shuffle(options);
-        staticObjects.addAll(options.subList(0, 2));
-
-        // Iniciar bales i explosions
-        bullets.clear();
-        explosions.clear();
-
-        // Reiniciar els tancs només si el servidor ja ha assignat el jugador.
-        if (tank != null && enemy != null) {
-            if (playerNumber == 0) {
-                tank.reset(new Point2D(90, 250), 0, 0);
-                enemy.reset(new Point2D(710, 250), 180, 180);
-            } else if (playerNumber == 1) {
-                tank.reset(new Point2D(710, 250), 180, 180);
-                enemy.reset(new Point2D(90, 250), 0, 0);
-            }
-        
-            // Iniciar el punt de mira cap al tanc rival.
-            target.setPosition(
-                    enemy.getPosition().getX(),
-                    enemy.getPosition().getY()
-            );
-        
-            tank.pointAt(target.getPosition());
-        }
-
-        // Reprendre el joc després de reiniciar-lo amb R
-        if (timer != null) timer.start();
-    }
-
-    // Actualitzar la posició del punt de mira
     private void updateTarget(MouseEvent event) {
         target.setPosition(event.getX(), event.getY());
     }
 
-    // Disparar una bala
-    private void fireBullet() {
+    // --- Enviament d'entrada al servidor ---
 
-        // Per disparar una bala:
-        // - el tanc ha d'estar viu
-        // - no hi pot haver més de MAX_BULLETS bales disparades al mateix temps
-        if (tank == null || enemy == null
-                || !tank.isAlive()
-                || bullets.size() >= MAX_BULLETS) {
-            return;
-        }
+    // demanar al servidor que dispari cap al punt de mira actual
+    private void sendShoot() {
+        if (!canPlay()) return;
 
-        // Apuntar des de la posició actual del tanc abans de disparar
-        tank.pointAt(target.getPosition());
-
-        // Afegir la bala a la llista de bales
-        Point2D position = tank.getPosition();
-        bullets.add(new Bullet(position, tank.getTurretAngle(), BULLET_SPEED));
+        JSONObject value = new JSONObject()
+                .put("aimX", target.getPosition().getX())
+                .put("aimY", target.getPosition().getY());
+        send(new JSONObject().put("type", "shoot").put("value", value));
     }
 
-    // Actualitzar la lògica del joc (run)
-    private void update() {
+    // enviar tecles i punt de mira, només si han canviat
+    private void sendInputIfChanged() {
+        if (!canPlay()) return;
 
-        // Esperar que el servidor assigni el jugador i es creïn els tancs.
-        if (tank == null || enemy == null) {
-            return;
-        }
-
-        double dt = calculateDt();
-        if (dt <= 0) return;
-
-        // Moure i comprovar col·lisions en PHYSICS_PRECISION passos petits.
-        // Això evita que dos moviments ràpids "se saltin" sense detectar el xoc,
-        // normalment això es fa amb matemàtiques més precises
-        // però així és més senzill i funciona prou bé per aquest joc.
-        double stepDt = dt / PHYSICS_PRECISION;
-        for (int step = 0; step < PHYSICS_PRECISION; step++) {
-            updateTank(stepDt);
-            updateBullets(stepDt);
-        }
-
-        // Les explosions només s'animen, no xoquen: n'hi ha prou amb un cop.
-        updateExplosions(dt);
-
-        // Apuntar des de la posició final del tanc.
-        tank.pointAt(target.getPosition());
-    }
-
-    // Calcular el temps transcorregut, en segons, des de l'última actualització.
-    // Aquest "dt" permet actualitzar els moviments sense dependre dels FPS.
-    private double calculateDt() {
-        long now = System.nanoTime();
-        double dt = lastRunNanos == 0 ? 0 : (now - lastRunNanos) / 1_000_000_000.0;
-        lastRunNanos = now;
-        dt = Math.min(dt, 0.05); // evita salts grans després d'una pausa
-        return dt;
-    }
-
-    // Llegir les tecles i moure el tanc si la nova posició és lliure.
-    private void updateTank(double dt) {
-        double dx = 0, dy = 0;
-
-        // Les fletxes i WASD comparteixen les mateixes direccions.
+        int dx = 0, dy = 0;
         if (pressedKeys.contains(KeyCode.LEFT) || pressedKeys.contains(KeyCode.A)) dx -= 1;
         if (pressedKeys.contains(KeyCode.RIGHT) || pressedKeys.contains(KeyCode.D)) dx += 1;
         if (pressedKeys.contains(KeyCode.UP) || pressedKeys.contains(KeyCode.W)) dy -= 1;
         if (pressedKeys.contains(KeyCode.DOWN) || pressedKeys.contains(KeyCode.S)) dy += 1;
 
-        tank.updateMovement(new Point2D(dx, dy), TANK_SPEED);
+        double aimX = target.getPosition().getX();
+        double aimY = target.getPosition().getY();
+        long now = System.nanoTime();
 
-        Point2D current = tank.getPosition();
-        Point2D next = tank.nextPosition(dt);
+        boolean moveChanged = dx != lastDx || dy != lastDy;
+        boolean aimChanged = aimX != lastAimX || aimY != lastAimY;
+        boolean aimDue = now - lastInputNanos >= AIM_SEND_INTERVAL_NANOS;
 
-        // Si el moviment complet xoca, provem de moure només en X o només en Y.
-        // Així el tanc llisca al llarg de la paret en lloc de quedar-s'hi enganxat.
-        Point2D onlyX = new Point2D(next.getX(), current.getY());
-        Point2D onlyY = new Point2D(current.getX(), next.getY());
+        if (!moveChanged && !(aimChanged && aimDue)) return;
 
-        if (!isTankBlocked(next)) tank.setPosition(next);
-        else if (!isTankBlocked(onlyX)) tank.setPosition(onlyX);
-        else if (!isTankBlocked(onlyY)) tank.setPosition(onlyY);
-        // Si tot està bloquejat, el tanc es queda on és.
+        JSONObject value = new JSONObject()
+                .put("dx", dx)
+                .put("dy", dy)
+                .put("aimX", aimX)
+                .put("aimY", aimY);
+        send(new JSONObject().put("type", "input").put("value", value));
+
+        lastDx = dx;
+        lastDy = dy;
+        lastAimX = aimX;
+        lastAimY = aimY;
+        lastInputNanos = now;
     }
 
-    // El tanc no pot entrar a les parets, als obstacles ni a l'altre tanc.
-    private boolean isTankBlocked(Point2D position) {
-        if (touchesStatic(position, Tank.RADIUS)) return true;
-        return enemy.isAlive()
-            && HelperCollisions.circlesOverlap(position, Tank.RADIUS, enemy.getPosition(), Tank.RADIUS);
+    // nomes s'envia entrada mentre la partida esta en marxa i el tanc esta viu
+    private boolean canPlay() {
+        return tank != null && tank.isAlive() && gameOverMessage == null;
     }
 
-    // Indica si un cercle a "position" toca alguna paret o obstacle.
-    private boolean touchesStatic(Point2D position, double radius) {
-        for (ObjectStatic rectangle : staticObjects) {
-            if (rectangle.touches(position, radius)) return true;
+    private void send(JSONObject message) {
+        if (Main.wsClient != null) {
+            Main.wsClient.safeSend(message.toString());
         }
-        return false;
     }
 
-    // Moure les bales i aplicar les regles del joc quan xoquen.
-    private void updateBullets(double dt) {
-        List<Bullet> bulletsToRemove = new ArrayList<>();
 
-        for (Bullet bullet : bullets) {
-            Point2D current = bullet.getPosition();
-            Point2D next = bullet.nextPosition(dt);
+    private void update() {
+        if (tank == null || enemy == null) return;
 
-            // 1. Paret o obstacle: el primer cop rebota, el segon desapareix.
-            if (touchesStatic(next, Bullet.RADIUS)) {
-                if (bullet.hasBounced()) {
-                    bulletsToRemove.add(bullet);
-                    addExplosion(current, 20);
-                } else {
-                    // Si movent-nos només en X ja xoquem, la paret és vertical: invertim X.
-                    // Si movent-nos només en Y ja xoquem, la paret és horitzontal: invertim Y.
-                    boolean invertX = touchesStatic(new Point2D(next.getX(), current.getY()), Bullet.RADIUS);
-                    boolean invertY = touchesStatic(new Point2D(current.getX(), next.getY()), Bullet.RADIUS);
-                    if (!invertX && !invertY) {
-                        // Ha tocat just una cantonada: torna enrere.
-                        invertX = true;
-                        invertY = true;
-                    }
-                    bullet.bounce(invertX, invertY);
-                }
-                continue; // La bala no avança aquest cop: es queda fora de la paret.
-            }
-            bullet.setPosition(next);
-
-            // 2. Tancs: l'enemic sempre; el nostre només si la bala ja ha rebotat.
-            if (enemy.isAlive() && bullet.touches(enemy)) {
-                destroyTank(enemy);
-                bulletsToRemove.add(bullet);
-            } else if (tank.isAlive() && bullet.hasBounced() && bullet.touches(tank)) {
-                destroyTank(tank);
-                bulletsToRemove.add(bullet);
-            }
-        }
-
-        // 3. Dues bales que es toquen desapareixen totes dues.
-        for (int i = 0; i < bullets.size(); i++) {
-            for (int j = i + 1; j < bullets.size(); j++) {
-                Bullet a = bullets.get(i);
-                Bullet b = bullets.get(j);
-                if (a.touches(b)) {
-                    bulletsToRemove.add(a);
-                    bulletsToRemove.add(b);
-                    addExplosion(a.getPosition().midpoint(b.getPosition()), 20);
-                }
-            }
-        }
-
-        // Retirar les bales al final, per no modificar la llista mentre la recorrem.
-        bullets.removeAll(bulletsToRemove);
+        double dt = calculateDt();
+        sendInputIfChanged();
+        updateExplosions(dt);
     }
 
-    // Destruir un tanc i mostrar una explosió gran.
-    private void destroyTank(Tank hitTank) {
-        hitTank.destroy();
-        addExplosion(hitTank.getPosition(), 60);
+    // aixo calcula el temps
+    private double calculateDt() {
+        long now = System.nanoTime();
+        double dt = lastRunNanos == 0 ? 0 : (now - lastRunNanos) / 1_000_000_000.0;
+        lastRunNanos = now;
+        return Math.min(dt, 0.05);
     }
 
-    // Actualitzar la durada dels efectes visuals i eliminar les explosions acabades.
     private void updateExplosions(double dt) {
         for (Explosion explosion : explosions) {
             explosion.update(dt);
@@ -371,38 +268,39 @@ public class CtrlPlay implements Initializable {
         explosions.removeIf(Explosion::isFinished);
     }
 
-    // Afegeix una explosió visual a la llista d'explosions
-    private void addExplosion(Point2D point, double radius) {
-        explosions.add(new Explosion(point.getX(), point.getY(), radius, EXPLOSION_DURATION));
-    }
 
-    // Dibuix del joc
     private void redraw() {
 
-        // Dibuix del fons
+        // fons
         double w = canvas.getWidth(), h = canvas.getHeight();
         gc.setFill(Color.WHITESMOKE);
         gc.fillRect(0, 0, w, h);
 
-        // Dibuix de tots els rectangles estàtics: parets i obstacles.
+        // parets i obstacles
         for (ObjectStatic rectangle : staticObjects) rectangle.draw(gc);
 
-        // Dibuix de les bales
         for (Bullet bullet : bullets) bullet.draw(gc);
 
-        // Dibuix dels tancs, només si ja s'han creat.
         if (tank != null && enemy != null) {
             tank.draw(gc);
             enemy.draw(gc);
         }
 
-        // Dibuix explosions
         for (Explosion explosion : explosions) explosion.draw(gc);
 
-        // Dibuix del canó i del punt de mira, només si el tanc existeix.
+        // cano i punt de mira del tanc
         if (tank != null && tank.isAlive()) {
             target.drawGuide(gc, tank, staticObjects);
             target.draw(gc, tank);
+        }
+
+        if (gameOverMessage != null) {
+            gc.save();
+            gc.setFill(Color.BLACK);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 40));
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.fillText(gameOverMessage, w / 2, h / 2);
+            gc.restore();
         }
     }
 }

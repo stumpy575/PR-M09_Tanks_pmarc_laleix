@@ -19,6 +19,29 @@
                 </configuration>
             </plugin>
 
+            <!-- Deja org.json, Java-WebSocket y slf4j dentro de target/classes durante
+                 "mvn compile", para poder arrancar con: java -cp target/classes ...
+                 (JavaFX no se copia: lo aporta el module-path de run.sh y run.ps1) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>unpack-runtime-libs</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeGroupIds>org.json,org.slf4j,org.java-websocket</includeGroupIds>
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                            <excludes>META-INF/MANIFEST.MF,META-INF/*.SF,META-INF/*.DSA,META-INF/*.RSA,**/module-info.class</excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Ejecutar el cliente JavaFX -->
             <plugin>
                 <groupId>org.openjfx</groupId>

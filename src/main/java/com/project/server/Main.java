@@ -41,25 +41,29 @@ public class Main extends WebSocketServer {
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
     private static final String K_CLIENT_NAME = "clientName";
-    private static final String K_TANKS = "tanks";
-    private static final String K_SEED = "seed";
+    private static final String K_PLAYERS = "players";
     private static final String K_WINNER = "winner";
-    private static final String K_SELF = "self";
 
-    private static final String T_TANK_STATE = "tankState";  // de client a server
-    private static final String T_HIT = "hit";               // de client a server
-    private static final String T_SERVER_DATA = "serverData";// de server a client
-    private static final String T_COUNTDOWN = "countdown";   // de server a client
-    private static final String T_GAME_START = "gameStart";  // de server a client
-    private static final String T_GAME_OVER = "gameOver";    // de server a client
+    // Màxim de segons que pot avançar la simulació en un sol tick
+    private static final double MAX_DT = 0.05;
 
-    private final ClientRegistry clients; // llista dels clients connectats
+    private static final String T_INPUT = "input";              // de client a server
+    private static final String T_SHOOT = "shoot";              // de client a server
+    private static final String T_SERVER_DATA = "serverData";   // de server a client
+    private static final String T_STATE = "state";              // de server a client
+    private static final String T_COUNTDOWN = "countdown";       // de server a client
+    private static final String T_GAME_START = "gameStart";     // de server a client
+    private static final String T_GAME_OVER = "gameOver";       // de server a client
 
-    private final GameState game = new GameState(); // la clase gamestate
+    private final ClientRegistry clients;
+
+    private final GameState game = new GameState();
 
     private volatile boolean countdownRunning = false;
 
     private final ScheduledExecutorService ticker;
+
+    private long lastTickNanos = 0;
 
     public Main(InetSocketAddress address) {
         super(address);
@@ -179,26 +183,35 @@ public class Main extends WebSocketServer {
     private void broadcastGameStart() {
         System.out.println("DEBUG: broadcastGameStart() ejecutado");
 
+        // Parets i obstacles els decideix el servidor: tots els clients veuen el mateix mapa
+        JSONObject layout = game.layoutToJSON();
+
         for (Map.Entry<WebSocket, String> player : clients.snapshot().entrySet()) {
             WebSocket socket = player.getKey();
 
             JSONObject rst = msg(T_GAME_START)
-                    .put(K_SEED, game.getSeed())
-                    .put("playerNumber", clients.playerNumber(socket));
+                    .put("playerNumber", clients.playerNumber(socket))
+                    .put("walls", layout.optJSONArray("walls"))
+                    .put("obstacles", layout.optJSONArray("obstacles"));
 
             sendSafe(socket, rst.toString());
         }
     }
 
-    private void broadcastStatus() {
-        JSONObject rst = msg(T_SERVER_DATA).put(K_TANKS, game.tanksToJSON());
+    private void broadcastLobby() {
+        JSONObject rst = msg(T_SERVER_DATA);
         List<String> names = new ArrayList<>(clients.snapshot().values());
         Collections.sort(names);
-        rst.put("players", new JSONArray(names));
+        rst.put(K_PLAYERS, new JSONArray(names));
         for (WebSocket conn : clients.snapshot().keySet()) {
             rst.put(K_CLIENT_NAME, clients.nameBySocket(conn));
             sendSafe(conn, rst.toString());
         }
+    }
+
+    private void broadcastState(JSONObject snapshot) {
+        snapshot.put(K_TYPE, T_STATE);
+        broadcastExcept(null, snapshot.toString());
     }
 
     private void broadcastGameOver(String winner) {
@@ -207,7 +220,6 @@ public class Main extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        // nomes admet REQUIRED_CLIENTS jugadors
         if (clients.snapshot().size() >= REQUIRED_CLIENTS) {
             System.out.println("Connexió rebutjada: partida plena");
             conn.close(1013, "Partida plena");
@@ -216,6 +228,7 @@ public class Main extends WebSocketServer {
 
         String name = clients.add(conn);
         System.out.println("WebSocket client connected: " + name + " (" + getColorForSocket(conn) + ")");
+        broadcastLobby();
         sendCountdown();
     }
 
@@ -225,6 +238,7 @@ public class Main extends WebSocketServer {
         if (name != null) {
             game.removePlayer(name);
             System.out.println("WebSocket client disconnected: " + name);
+            broadcastLobby();
         }
     }
 
@@ -246,33 +260,37 @@ public class Main extends WebSocketServer {
         
             case "setName" -> {
                 String newName = obj.optString(K_VALUE, "").trim();
-            
+
                 if (newName.isEmpty()) {
                     return;
                 }
-            
+
                 boolean renamed = clients.rename(conn, newName);
-            
+
                 if (renamed) {
                     System.out.println("Jugador registrado con el nombre: " + newName);
+                    broadcastLobby();
                 } else {
                     System.out.println("No se pudo registrar el nombre: " + newName);
                 }
             }
-        
-            case T_TANK_STATE -> {
+
+            case T_INPUT -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
                 if (value != null) {
-                    game.setTankState(name, value);
+                    game.setInput(name,
+                            value.optInt("dx", 0), value.optInt("dy", 0),
+                            value.optDouble("aimX"), value.optDouble("aimY"));
                 }
             }
-        
-            case T_HIT -> {
+
+            case T_SHOOT -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
-                boolean self = value != null && value.optBoolean(K_SELF, false);
-                game.hit(name, self);
+                double aimX = value != null ? value.optDouble("aimX") : Double.NaN;
+                double aimY = value != null ? value.optDouble("aimY") : Double.NaN;
+                game.fire(name, aimX, aimY);
             }
-        
+
             default -> {
             }
         }
@@ -291,23 +309,33 @@ public class Main extends WebSocketServer {
     }
 
     private void startTicker() {
-        long periodMs = Math.max(1, 1000 / TICK_FPS);
+        long periodNanos = 1_000_000_000L / TICK_FPS;
         ticker.scheduleAtFixedRate(() -> {
             try {
-                String winner = game.consumeWinner();
-                if (winner != null) {
-                    //acaba la paertida i comença un altre partida
-                    broadcastGameOver(winner);
-                    ticker.schedule(this::sendCountdown, RESTART_DELAY_SECONDS, TimeUnit.SECONDS);
+                long now = System.nanoTime();
+                double dt = lastTickNanos == 0 ? 1.0 / TICK_FPS : (now - lastTickNanos) / 1_000_000_000.0;
+                lastTickNanos = now;
+                dt = Math.min(dt, MAX_DT);
+
+                // el servidor simula la partida
+                game.tick(dt);
+
+                // envia l'estat als clients
+                JSONObject snapshot = game.snapshot();
+                if (snapshot != null) {
+                    broadcastState(snapshot);
                 }
 
-                if (!clients.snapshot().isEmpty()) {
-                    broadcastStatus();
+                // si algu guanya acaba la partida i comená un altre
+                String winner = game.consumeWinner();
+                if (winner != null) {
+                    broadcastGameOver(winner);
+                    ticker.schedule(this::sendCountdown, RESTART_DELAY_SECONDS, TimeUnit.SECONDS);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }, 0, periodMs, TimeUnit.MILLISECONDS);
+        }, 0, periodNanos, TimeUnit.NANOSECONDS);
     }
 
     private void stopTicker() {

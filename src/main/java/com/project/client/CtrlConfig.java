@@ -88,8 +88,6 @@ public class CtrlConfig implements Initializable {
         // Cuando se reciba un mensaje del servidor
         Main.wsClient.onMessage(message -> {
         
-            System.out.println("Mensaje recibido del servidor: " + message);
-        
             try {
                 JSONObject obj = new JSONObject(message);
             
@@ -119,6 +117,23 @@ public class CtrlConfig implements Initializable {
                     if (Main.ctrlWait != null) {
                         Main.ctrlWait.updateCountdown(seconds);
                     }
+
+                    // Si veníamos de una partida, volver a la sala de espera
+                    Platform.runLater(() -> {
+                        if ("ViewPlay".equals(UtilsViews.getActiveView())) {
+                            UtilsViews.setView("ViewWait");
+                        }
+                    });
+                }
+
+                // Estado de la partida calculado por el servidor
+                else if ("state".equals(obj.optString("type"))) {
+                    Main.ctrlPlay.applyState(obj);
+                }
+
+                // Fin de la partida
+                else if ("gameOver".equals(obj.optString("type"))) {
+                    Main.ctrlPlay.showGameOver(obj.optString("winner"));
                 }
 
                 // Cuando el servidor indique que empieza la partida
@@ -130,8 +145,11 @@ public class CtrlConfig implements Initializable {
                         "DEBUG: gameStart recibido. playerNumber = " + playerNumber
                     );
                 
+                    JSONArray walls = obj.optJSONArray("walls");
+                    JSONArray obstacles = obj.optJSONArray("obstacles");
+
                     Platform.runLater(() -> {
-                        Main.ctrlPlay.setPlayerNumber(playerNumber);
+                        Main.ctrlPlay.startGame(playerNumber, walls, obstacles);
                         UtilsViews.setView("ViewPlay");
                     });
                 }
