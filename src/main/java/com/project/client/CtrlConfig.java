@@ -3,6 +3,8 @@ package com.project.client;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
@@ -63,43 +65,84 @@ public class CtrlConfig implements Initializable {
         // Crear la conexión utilizando UtilsWS
         Main.wsClient = UtilsWS.getSharedInstance(url);
 
-        // Conectar al servidor
-        Main.wsClient.connect();
-
         // Cuando se conecte correctamente
         Main.wsClient.onOpen(message -> {
 
+            // Enviar al servidor el nombre elegido por el jugador
+            JSONObject nameMessage = new JSONObject()
+                .put("type", "setName")
+                .put("value", Main.playerName);
+
+            Main.wsClient.safeSend(nameMessage.toString());
+        
             Platform.runLater(() -> {
-
+            
                 txtMessage.setText("Conectado correctamente");
-
+            
                 UtilsViews.setView("ViewWait");
-
+            
             });
+        
+        });
 
+        // Cuando se reciba un mensaje del servidor
+        Main.wsClient.onMessage(message -> {
+        
+            System.out.println("Mensaje recibido del servidor: " + message);
+        
+            try {
+                JSONObject obj = new JSONObject(message);
+            
+                // Procesar los datos de los jugadores
+                if ("serverData".equals(obj.optString("type"))) {
+                
+                    JSONArray playersArray = obj.optJSONArray("players");
+                
+                    if (playersArray != null) {
+                    
+                        String[] players = new String[playersArray.length()];
+                    
+                        for (int i = 0; i < playersArray.length(); i++) {
+                            players[i] = playersArray.optString(i);
+                        }
+                    
+                        if (Main.ctrlWait != null) {
+                            Main.ctrlWait.updatePlayers(players);
+                        }
+                    }
+                }
+            
+            } catch (Exception e) {
+                System.out.println("Error procesando mensaje del servidor: "
+                        + e.getMessage());
+            }
+        
         });
 
         // Cuando ocurra un error
         Main.wsClient.onError(message -> {
-
+        
             Platform.runLater(() -> {
-
+            
                 txtMessage.setText("Error de conexión: " + message);
-
+            
             });
-
+        
         });
 
         // Cuando se cierre la conexión
         Main.wsClient.onClose(message -> {
-
+        
             Platform.runLater(() -> {
-
+            
                 txtMessage.setText("Conexión cerrada");
-
+            
             });
-
+        
         });
+
+        // Conectar al servidor después de registrar los callbacks
+        Main.wsClient.connect();
     }
 
     @FXML

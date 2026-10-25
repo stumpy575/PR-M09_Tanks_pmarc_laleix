@@ -214,17 +214,36 @@ public class Main extends WebSocketServer {
         }
 
         switch (obj.optString(K_TYPE, "")) {
+        
+            case "setName" -> {
+                String newName = obj.optString(K_VALUE, "").trim();
+            
+                if (newName.isEmpty()) {
+                    return;
+                }
+            
+                boolean renamed = clients.rename(conn, newName);
+            
+                if (renamed) {
+                    System.out.println("Jugador registrado con el nombre: " + newName);
+                } else {
+                    System.out.println("No se pudo registrar el nombre: " + newName);
+                }
+            }
+        
             case T_TANK_STATE -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
                 if (value != null) {
                     game.setTankState(name, value);
                 }
             }
+        
             case T_HIT -> {
                 JSONObject value = obj.optJSONObject(K_VALUE);
                 boolean self = value != null && value.optBoolean(K_SELF, false);
                 game.hit(name, self);
             }
+        
             default -> {
             }
         }

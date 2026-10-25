@@ -94,6 +94,34 @@ final class ClientRegistry {
         return name;
     }
 
+    boolean rename(WebSocket socket, String newName) {
+        if (socket == null || newName == null || newName.isBlank()) {
+            return false;
+        }
+
+        newName = newName.trim();
+
+        synchronized (this) {
+            String oldName = bySocket.get(socket);
+
+            if (oldName == null) {
+                return false;
+            }
+
+            WebSocket existingSocket = byName.get(newName);
+
+            if (existingSocket != null && !existingSocket.equals(socket)) {
+                return false;
+            }
+
+            byName.remove(oldName);
+            bySocket.put(socket, newName);
+            byName.put(newName, socket);
+        
+            return true;
+        }
+    }
+
     /**
      * Elimina un client del registre i retorna el nom al pool.
      *

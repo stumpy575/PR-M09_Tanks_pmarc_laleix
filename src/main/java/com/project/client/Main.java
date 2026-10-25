@@ -56,24 +56,6 @@ public class Main extends Application {
             Image icon = new Image("file:/icons/icon.png");
             stage.getIcons().add(icon);
         }
-
-
-
-
-        // // Carrega l'única vista de l'exemple
-        // Parent root = FXMLLoader.load(getClass().getResource("/assets/game.fxml"));
-        // Scene scene = new Scene(root);
-// 
-        // stage.setScene(scene);
-        // stage.setTitle("Exemple 0606 - Tanks");
-        // stage.setResizable(false);
-// 
-        // if (!System.getProperty("os.name").contains("Mac")) {
-        //     Image icon = new Image(getClass().getResourceAsStream("/icons/icon.png"));
-        //     stage.getIcons().add(icon);
-        // }
-// 
-        // stage.show();
     }
 
     public static void main(String[] args) {
