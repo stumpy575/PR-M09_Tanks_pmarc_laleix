@@ -11,7 +11,7 @@ public class Main extends Application {
 
     public static CtrlConfig ctrlConfig;
     public static CtrlWait ctrlWait;
-    //public static CtrlPlay ctrlPlay;
+    public static CtrlPlay ctrlPlay;
 
     public static UtilsWS wsClient;
     public static String playerName;
@@ -25,11 +25,11 @@ public class Main extends Application {
         UtilsViews.parentContainer.setStyle("-fx-font: 14 arial;");
         UtilsViews.addView(getClass(), "ViewConfig", "/assets/viewConfig.fxml"); 
         UtilsViews.addView(getClass(), "ViewWait", "/assets/viewWait.fxml");
-        // UtilsViews.addView(getClass(), "ViewPlay", "/assets/Play.fxml");
+        UtilsViews.addView(getClass(), "ViewPlay", "/assets/viewPlay.fxml");
 
         ctrlConfig = (CtrlConfig) UtilsViews.getController("ViewConfig");
         ctrlWait = (CtrlWait) UtilsViews.getController("ViewWait");
-        //ctrlPlay = (CtrlPlay) UtilsViews.getController("ViewPlay");
+        ctrlPlay = (CtrlPlay) UtilsViews.getController("ViewPlay");
 
         Scene scene = new Scene(UtilsViews.parentContainer);
         

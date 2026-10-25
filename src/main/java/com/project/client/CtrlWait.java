@@ -35,4 +35,14 @@ public class CtrlWait implements Initializable {
             );
         });
     }
+
+    public void updateCountdown(int seconds) {
+        Platform.runLater(() -> {
+            if (seconds > 0) {
+                txtTitle.setText("La partida empieza en " + seconds + "...");
+            } else {
+                txtTitle.setText("¡Empieza la partida!");
+            }
+        });
+    }
 }

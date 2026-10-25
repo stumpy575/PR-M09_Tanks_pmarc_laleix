@@ -19,7 +19,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
-public class Controller implements Initializable {
+public class CtrlPlay implements Initializable {
 
     @FXML private Canvas canvas;
     private GraphicsContext gc;

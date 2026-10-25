@@ -110,6 +110,23 @@ public class CtrlConfig implements Initializable {
                             Main.ctrlWait.updatePlayers(players);
                         }
                     }
+                } 
+                // Procesar la cuenta atrás
+                else if ("countdown".equals(obj.optString("type"))) {
+
+                    int seconds = obj.optInt("value");
+
+                    if (Main.ctrlWait != null) {
+                        Main.ctrlWait.updateCountdown(seconds);
+                    }
+                }
+
+                // Cuando el servidor indique que empieza la partida
+                else if ("gameStart".equals(obj.optString("type"))) {
+                
+                    Platform.runLater(() -> {
+                        UtilsViews.setView("ViewPlay");
+                    });
                 }
             
             } catch (Exception e) {
