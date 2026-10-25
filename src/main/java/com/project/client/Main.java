@@ -13,6 +13,9 @@ public class Main extends Application {
     public static CtrlWait ctrlWait;
     //public static CtrlPlay ctrlPlay;
 
+    public static UtilsWS wsClient;
+    public static String playerName;
+
     @Override
     public void start(Stage stage) throws Exception {
 
@@ -35,6 +38,17 @@ public class Main extends Application {
         stage.setTitle("JavaFX");
         stage.setMinWidth(windowWidth);
         stage.setMinHeight(windowHeight);
+
+        stage.setOnCloseRequest(event -> {
+                
+            System.out.println("Cerrando cliente...");
+                
+            if (wsClient != null) {
+                wsClient.forceExit();
+            }
+        
+        });
+
         stage.show();
 
         // Add icon only if not Mac
