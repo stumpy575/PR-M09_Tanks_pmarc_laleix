@@ -16,6 +16,7 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -53,6 +54,23 @@ public class CtrlPlay implements Initializable {
     private int lastDx = 0, lastDy = 0;
     private double lastAimX = Double.NaN, lastAimY = Double.NaN;
     private long lastInputNanos = 0;
+
+    @FXML 
+    private Label txtMap;
+    
+    @FXML 
+    private Label txtNamePlayer1;
+    @FXML 
+    private Label txtLivesPlayer1;
+    @FXML 
+    private Label txtBulletsPlayer1;  
+
+    @FXML 
+    private Label txtNamePlayer2;  
+    @FXML 
+    private Label txtLivesPlayer2;  
+    @FXML 
+    private Label txtBulletsPlayer2; 
 
     // --- Inici de partida ---
 
