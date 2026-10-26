@@ -5,11 +5,12 @@ import java.util.ResourceBundle;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.application.Platform;
 
 public class CtrlConfig implements Initializable {
 
@@ -197,7 +198,7 @@ public class CtrlConfig implements Initializable {
     @FXML
     private void setConfigProxmox() {
         txtProtocol.setText("wss");
-        txtHost.setText("user.ieti.site");
+        txtHost.setText("alinaressousa.ieti.site");
         txtPort.setText("443");
     }
 }

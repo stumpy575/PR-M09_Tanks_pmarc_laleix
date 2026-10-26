@@ -1,8 +1,6 @@
 package com.project.client;
 
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
@@ -19,8 +17,8 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) throws Exception {
 
-        final int windowWidth = 400;
-        final int windowHeight = 300;
+        final int windowWidth = 1020;
+        final int windowHeight = 705;
 
         UtilsViews.parentContainer.setStyle("-fx-font: 14 arial;");
         UtilsViews.addView(getClass(), "ViewConfig", "/assets/viewConfig.fxml"); 
@@ -38,6 +36,7 @@ public class Main extends Application {
         stage.setTitle("JavaFX");
         stage.setMinWidth(windowWidth);
         stage.setMinHeight(windowHeight);
+        stage.setResizable(false);
 
         stage.setOnCloseRequest(event -> {
                 
