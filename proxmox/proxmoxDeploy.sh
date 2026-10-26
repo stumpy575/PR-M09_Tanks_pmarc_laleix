@@ -23,8 +23,15 @@ if [[ ! -f "$RSA_PATH" ]]; then
 fi
 
 echo "Generant el fitxer JAR..."
-rm -f "$JAR_PATH"
-./run.sh com.project.server.Main build
+
+mvn clean package -Pserver -DskipTests
+
+if [[ $? -ne 0 ]]; then
+    echo "Error: No s'ha pogut generar el JAR."
+    exit 1
+fi
+
+mv ./target/exemple-0606-1.0.0-server.jar "$JAR_PATH"
 
 if [[ ! -f "$JAR_PATH" ]]; then
     echo "Error: No s'ha trobat l'arxiu JAR: $JAR_PATH"

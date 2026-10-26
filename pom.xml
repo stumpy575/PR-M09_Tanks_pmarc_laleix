@@ -101,5 +101,44 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>server</id>
+        
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.4.2</version>
+        
+                        <executions>
+                            <execution>
+                                <id>server-jar</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+        
+                                <configuration>
+                                    <classifier>server</classifier>
+        
+                                    <archive>
+                                        <manifest>
+                                            <mainClass>com.project.server.Main</mainClass>
+                                        </manifest>
+                                    </archive>
+        
+                                    <excludes>
+                                        <exclude>com/project/client/**</exclude>
+                                        <exclude>**/*.fxml</exclude>
+                                        <exclude>**/*.css</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
