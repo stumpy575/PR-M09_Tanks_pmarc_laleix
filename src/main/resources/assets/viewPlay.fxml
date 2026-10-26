@@ -2,14 +2,109 @@
 
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/22"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.project.client.CtrlPlay">
+<VBox prefHeight="680.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.project.client.CtrlPlay">
     <children>
-        <Canvas fx:id="canvas" width="800.0" height="500.0" />
-        <Label text="Fletxes o WASD: moure el tanc · Ratolí: apuntar · Clic: disparar"
-               style="-fx-padding: 8;" />
+        <Canvas fx:id="canvas" height="500.0" width="800.0" />
+        <Label style="-fx-padding: 8;" text="Fletxes o WASD: moure el tanc · Ratolí: apuntar · Clic: disparar" />
+      <VBox alignment="TOP_CENTER" prefHeight="150.0" prefWidth="800.0">
+         <children>
+            <HBox alignment="CENTER" prefHeight="40.0" prefWidth="800.0">
+               <children>
+                  <Label alignment="CENTER" contentDisplay="CENTER" text="Mapa: " textAlignment="CENTER">
+                     <font>
+                        <Font name="System Bold" size="25.0" />
+                     </font>
+                  </Label>
+                  <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="67.0" text="MAP" textAlignment="CENTER">
+                     <font>
+                        <Font size="25.0" />
+                     </font>
+                  </Label>
+               </children>
+            </HBox>
+            <HBox alignment="CENTER" layoutX="10.0" layoutY="10.0" prefHeight="110.0" prefWidth="800.0">
+               <children>
+                  <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="400.0">
+                     <children>
+                        <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="75.0" text="NAME" textAlignment="CENTER" textFill="BLUE">
+                           <font>
+                              <Font name="System Bold" size="25.0" />
+                           </font>
+                        </Label>
+                        <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="Vides: " textAlignment="CENTER">
+                                 <font>
+                                    <Font name="System Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                              <Label alignment="CENTER" contentDisplay="CENTER" layoutX="175.0" layoutY="10.0" text="LIVES" textAlignment="CENTER">
+                                 <font>
+                                    <Font size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </HBox>
+                        <HBox alignment="CENTER" layoutX="10.0" layoutY="46.0" prefHeight="100.0" prefWidth="200.0">
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="Projectils: " textAlignment="CENTER">
+                                 <font>
+                                    <Font name="System Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                              <Label alignment="CENTER" contentDisplay="CENTER" layoutX="175.0" layoutY="10.0" text="BULLETS" textAlignment="CENTER">
+                                 <font>
+                                    <Font size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </HBox>
+                     </children>
+                  </VBox>
+                  <VBox alignment="TOP_CENTER" layoutX="210.0" layoutY="10.0" prefHeight="200.0" prefWidth="400.0">
+                     <children>
+                        <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="75.0" text="NAME" textAlignment="CENTER" textFill="RED">
+                           <font>
+                              <Font name="System Bold" size="25.0" />
+                           </font>
+                        </Label>
+                        <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0">
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="Vides: " textAlignment="CENTER">
+                                 <font>
+                                    <Font name="System Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                              <Label alignment="CENTER" contentDisplay="CENTER" layoutX="175.0" layoutY="10.0" text="LIVES" textAlignment="CENTER">
+                                 <font>
+                                    <Font size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </HBox>
+                        <HBox alignment="CENTER" layoutX="10.0" layoutY="46.0" prefHeight="100.0" prefWidth="200.0">
+                           <children>
+                              <Label alignment="CENTER" contentDisplay="CENTER" text="Projectils: " textAlignment="CENTER">
+                                 <font>
+                                    <Font name="System Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                              <Label alignment="CENTER" contentDisplay="CENTER" layoutX="175.0" layoutY="10.0" text="BULLETS" textAlignment="CENTER">
+                                 <font>
+                                    <Font size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </HBox>
+                     </children>
+                  </VBox>
+               </children>
+            </HBox>
+         </children>
+      </VBox>
     </children>
 </VBox>
