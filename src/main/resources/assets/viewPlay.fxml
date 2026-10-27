@@ -30,7 +30,7 @@
                <children>
                   <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="400.0">
                      <children>
-                        <Label fx:id="txtNamePlayer1" alignment="CENTER" contentDisplay="CENTER" prefWidth="75.0" text="NAME" textAlignment="CENTER" textFill="BLUE">
+                        <Label fx:id="txtNamePlayer1" alignment="CENTER" contentDisplay="CENTER" prefWidth="400.0" text="NAME" textAlignment="CENTER" textFill="BLUE">
                            <font>
                               <Font name="System Bold" size="25.0" />
                            </font>
@@ -67,7 +67,7 @@
                   </VBox>
                   <VBox alignment="TOP_CENTER" layoutX="210.0" layoutY="10.0" prefHeight="200.0" prefWidth="400.0">
                      <children>
-                        <Label fx:id="txtNamePlayer2" alignment="CENTER" contentDisplay="CENTER" prefWidth="75.0" text="NAME" textAlignment="CENTER" textFill="RED">
+                        <Label fx:id="txtNamePlayer2" alignment="CENTER" contentDisplay="CENTER" prefWidth="400.0" text="NAME" textAlignment="CENTER" textFill="RED">
                            <font>
                               <Font name="System Bold" size="25.0" />
                            </font>

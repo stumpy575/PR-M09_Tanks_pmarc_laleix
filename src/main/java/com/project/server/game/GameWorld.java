@@ -107,13 +107,23 @@ public class GameWorld {
 
     // Avança la simulacio x segons
     public void tick(double dt) {
+
         double step = dt / PHYSICS_PRECISION;
+
         for (int i = 0; i < PHYSICS_PRECISION; i++) {
-            for (Tank tank : tanks) updateTank(tank, step);
+
+            for (Tank tank : tanks) {
+                updateTank(tank, step);
+                tank.updateInvulnerability(step);
+            }
+
             updateBullets(step);
         }
+
         for (Tank tank : tanks) {
-            if (tank.alive) tank.pointAtAim();
+            if (tank.alive) {
+                tank.pointAtAim();
+            }
         }
     }
 
@@ -184,11 +194,23 @@ public class GameWorld {
             bullet.y = nextY;
 
             if (destroyedTank >= 0) continue;
+                    
             for (Tank tank : tanks) {
-                if (!tank.alive || !bullet.touches(tank)) continue;
+            
+                if (!tank.alive || !bullet.touches(tank)) {
+                    continue;
+                }
+            
                 if (tank.index != bullet.owner || bullet.bounced) {
-                    destroyTank(tank);
+                
+                    // El proyectil desaparece al impactar
                     toRemove.add(bullet);
+                
+                    // Solo recibe daño si no es invulnerable
+                    if (tank.invulnerabilityTimer <= 0) {
+                        destroyTank(tank);
+                    }
+                
                     break;
                 }
             }

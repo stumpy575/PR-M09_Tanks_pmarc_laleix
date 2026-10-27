@@ -13,6 +13,9 @@ public final class Tank {
     public boolean alive = true;
     public int lives = 3;
 
+    private static final double INVULNERABILITY_TIME = 1.0;
+    public double invulnerabilityTimer = 0;
+
     // ultima entrada rebuda del client
     public int dx, dy;         // direccio de moviment
     public double aimX, aimY;  // posicio del punt de mira
@@ -30,14 +33,30 @@ public final class Tank {
     }
 
     void takeDamage() {
-        if (!alive) return;
-    
+
+        if (!alive || invulnerabilityTimer > 0) {
+            return;
+        }
+
         lives--;
-    
+
         if (lives <= 0) {
             lives = 0;
             alive = false;
             speed = 0;
+        } else {
+            invulnerabilityTimer = INVULNERABILITY_TIME;
+        }
+    }
+
+    void updateInvulnerability(double dt) {
+        
+        if (invulnerabilityTimer > 0) {
+            invulnerabilityTimer -= dt;
+        
+            if (invulnerabilityTimer < 0) {
+                invulnerabilityTimer = 0;
+            }
         }
     }
 }

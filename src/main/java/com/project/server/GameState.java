@@ -114,8 +114,8 @@ public class GameState {
                 .put("angle", round(t.angle))
                 .put("turretAngle", round(t.turretAngle))
                 .put("alive", t.alive).put("lives", t.lives)
+                .put("invulnerable", t.invulnerabilityTimer > 0)
             );
-                    
         }
 
         JSONArray bullets = new JSONArray();

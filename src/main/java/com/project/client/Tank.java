@@ -12,6 +12,7 @@ class Tank extends ObjectDynamic {
     private double turretAngle;
     private final Color color;
     private boolean alive;
+    private boolean invulnerable;
 
     Tank(Point2D position, double angle, double turretAngle, Color color) {
         super(position, angle, 0);
@@ -41,6 +42,10 @@ class Tank extends ObjectDynamic {
         setSpeed(0);
     }
 
+    void setInvulnerable(boolean invulnerable) {
+        this.invulnerable = invulnerable;
+    }
+
     void reset(Point2D position, double angle, double turretAngle) {
         setPosition(position);
         setAngle(angle);
@@ -68,8 +73,13 @@ class Tank extends ObjectDynamic {
 
     @Override
     void draw(GraphicsContext gc) {
-
+    
         if (!alive) return;
+    
+        // El tanc parpelleja mentre és invulnerable
+        if (invulnerable && (System.nanoTime() / 100_000_000L) % 2 == 0) {
+            return;
+        }
 
         gc.save();
         gc.translate(position.getX(), position.getY());

@@ -35,6 +35,8 @@ public class CtrlPlay implements Initializable {
 
     private static final double EXPLOSION_DURATION = 0.6; // es mesura en segons aixo
 
+    private static final int MAX_BULLETS = 4;
+
     private static final long AIM_SEND_INTERVAL_NANOS = 33_000_000L;
 
     private final List<ObjectStatic> staticObjects = new ArrayList<>();
@@ -94,9 +96,11 @@ public class CtrlPlay implements Initializable {
         // Mostrar la informacion inicial 
         txtNamePlayer1.setText("Jugador 1");
         txtLivesPlayer1.setText("3");
+        txtBulletsPlayer1.setText("4/4");
 
         txtNamePlayer2.setText("Jugador 2");
         txtLivesPlayer2.setText("3");
+        txtBulletsPlayer2.setText("4/4");
 
         Tank blue = new Tank(new Point2D(90, 250), 0, 0, Color.BLUE);
         Tank red = new Tank(new Point2D(710, 250), 180, 180, Color.RED);
@@ -162,6 +166,9 @@ public class CtrlPlay implements Initializable {
                     t.getBoolean("alive")
                 );
 
+                
+                shown.setInvulnerable(t.optBoolean("invulnerable", false));
+
                 // Obtener informacion del jugador
                 String name = t.getString("name");
                 int lives = t.getInt("lives");
@@ -183,13 +190,44 @@ public class CtrlPlay implements Initializable {
         }
 
         bullets.clear();
+
         JSONArray bulletsJson = state.optJSONArray("bullets");
+
+        // Contadores de proyectiles en el campo
+        int bulletsPlayer1 = 0;
+        int bulletsPlayer2 = 0;
+
         if (bulletsJson != null) {
+        
             for (int i = 0; i < bulletsJson.length(); i++) {
+            
                 JSONObject b = bulletsJson.getJSONObject(i);
-                bullets.add(new Bullet(new Point2D(b.getDouble("x"), b.getDouble("y")), b.getDouble("angle")));
+            
+                // Dibujar los proyectiles
+                bullets.add(new Bullet(
+                        new Point2D(b.getDouble("x"), b.getDouble("y")),
+                        b.getDouble("angle")
+                ));
+            
+                // Obtener el jugador que ha disparado
+                int owner = b.getInt("owner");
+            
+                // Contar los proyectiles de cada jugador
+                if (owner == 0) {
+                    bulletsPlayer1++;
+                } else if (owner == 1) {
+                    bulletsPlayer2++;
+                }
             }
         }
+
+        // Calcular los proyectiles disponibles
+        int availablePlayer1 = MAX_BULLETS - bulletsPlayer1;
+        int availablePlayer2 = MAX_BULLETS - bulletsPlayer2;
+
+        // Actualizar los Label
+        txtBulletsPlayer1.setText(availablePlayer1 + "/" + MAX_BULLETS);
+        txtBulletsPlayer2.setText(availablePlayer2 + "/" + MAX_BULLETS);
 
         JSONArray events = state.optJSONArray("events");
         if (events != null) {
