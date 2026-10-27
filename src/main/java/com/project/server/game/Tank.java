@@ -11,6 +11,7 @@ public final class Tank {
     public double turretAngle;
     public double speed;
     public boolean alive = true;
+    public int lives = 3;
 
     // ultima entrada rebuda del client
     public int dx, dy;         // direccio de moviment
@@ -28,8 +29,15 @@ public final class Tank {
         turretAngle = Math.toDegrees(Math.atan2(aimY - y, aimX - x));
     }
 
-    void destroy() {
-        alive = false;
-        speed = 0;
+    void takeDamage() {
+        if (!alive) return;
+    
+        lives--;
+    
+        if (lives <= 0) {
+            lives = 0;
+            alive = false;
+            speed = 0;
+        }
     }
 }

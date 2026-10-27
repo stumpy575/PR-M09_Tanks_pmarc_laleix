@@ -91,6 +91,13 @@ public class CtrlPlay implements Initializable {
         gameOverMessage = null;
         lastRunNanos = 0;
 
+        // Mostrar la informacion inicial 
+        txtNamePlayer1.setText("Jugador 1");
+        txtLivesPlayer1.setText("3");
+
+        txtNamePlayer2.setText("Jugador 2");
+        txtLivesPlayer2.setText("3");
+
         Tank blue = new Tank(new Point2D(90, 250), 0, 0, Color.BLUE);
         Tank red = new Tank(new Point2D(710, 250), 180, 180, Color.RED);
         tank = playerNumber == 0 ? blue : red;
@@ -138,17 +145,41 @@ public class CtrlPlay implements Initializable {
         if (tank == null || enemy == null) return;
 
         JSONArray tanks = state.optJSONArray("tanks");
+
         if (tanks != null) {
+
             for (int i = 0; i < tanks.length(); i++) {
+
                 JSONObject t = tanks.getJSONObject(i);
+
                 Tank shown = (i == playerNumber) ? tank : enemy;
+
+                // Actualizar el tanque
                 shown.updateState(
-                        new Point2D(t.getDouble("x"), t.getDouble("y")),
-                        t.getDouble("angle"),
-                        t.getDouble("turretAngle"),
-                        t.getBoolean("alive"));
+                    new Point2D(t.getDouble("x"), t.getDouble("y")),
+                    t.getDouble("angle"),
+                    t.getDouble("turretAngle"),
+                    t.getBoolean("alive")
+                );
+
+                // Obtener informacion del jugador
+                String name = t.getString("name");
+                int lives = t.getInt("lives");
+
+                // Actualizar la información de cada jugador
+                if (i == 0) {
+                    txtNamePlayer1.setText(name);
+                    txtLivesPlayer1.setText(String.valueOf(lives));
+
+                } else if (i == 1) {
+                    txtNamePlayer2.setText(name);
+                    txtLivesPlayer2.setText(String.valueOf(lives));
+                }
             }
-            if (tank.isAlive()) tank.pointAt(target.getPosition());
+
+            if (tank.isAlive()) {
+                tank.pointAt(target.getPosition());
+            };
         }
 
         bullets.clear();

@@ -105,14 +105,17 @@ public class GameState {
         JSONArray tanks = new JSONArray();
         for (Tank t : world.getTanks()) {
             String name = players.get(t.index);
-            tanks.put(new JSONObject()
-                    .put("name", name)
-                    .put("color", colors.get(name))
-                    .put("x", round(t.x))
-                    .put("y", round(t.y))
-                    .put("angle", round(t.angle))
-                    .put("turretAngle", round(t.turretAngle))
-                    .put("alive", t.alive));
+            tanks.put(
+                new JSONObject()
+                .put("name", name)
+                .put("color", colors.get(name))
+                .put("x", round(t.x))
+                .put("y", round(t.y))
+                .put("angle", round(t.angle))
+                .put("turretAngle", round(t.turretAngle))
+                .put("alive", t.alive).put("lives", t.lives)
+            );
+                    
         }
 
         JSONArray bullets = new JSONArray();

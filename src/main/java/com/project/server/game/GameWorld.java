@@ -212,9 +212,18 @@ public class GameWorld {
     }
 
     private void destroyTank(Tank tank) {
-        tank.destroy();
-        if (destroyedTank < 0) destroyedTank = tank.index;
-        addExplosion(tank.x, tank.y, 60);
+    
+        tank.takeDamage();
+    
+        if (!tank.alive) {
+            if (destroyedTank < 0) {
+                destroyedTank = tank.index;
+            }
+        
+            addExplosion(tank.x, tank.y, 60);
+        } else {
+            addExplosion(tank.x, tank.y, 30);
+        }
     }
 
     private void addExplosion(double x, double y, double radius) {
