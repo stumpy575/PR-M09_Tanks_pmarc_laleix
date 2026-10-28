@@ -72,11 +72,13 @@ public class GameState {
         }
     }
 
-    // si un jugador marxa en plena partida guanya l'altre
+    // Si un jugador abandona la partida, gana el rival.
     public synchronized void removePlayer(String name) {
-        if (running && winner == null) {
-            winner = rivalOf(name);
+        if (!running || winner != null || !players.contains(name)) {
+            return;
         }
+    
+        winner = rivalOf(name);
     }
 
     public synchronized String consumeWinner() {
@@ -159,5 +161,9 @@ public class GameState {
             if (!p.equals(name)) return p;
         }
         return null;
+    }
+
+    public synchronized String getLoser(String winner) {
+        return rivalOf(winner);
     }
 }

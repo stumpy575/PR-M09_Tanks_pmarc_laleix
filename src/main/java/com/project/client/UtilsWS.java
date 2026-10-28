@@ -23,6 +23,7 @@ public class UtilsWS {
     private String location = "";
     private static AtomicBoolean exitRequested = new AtomicBoolean(false);
     private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private volatile boolean reconnectEnabled = true;
 
     private UtilsWS(String location) {
         this.location = location;
@@ -49,24 +50,50 @@ public class UtilsWS {
 
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
-                    String message = "WS closed connection from: " + getURI() + " with reason: " + reason;
+                    String message = "WebSocket cerrado. Código: "
+                            + code + ", motivo: " + reason;
+                
                     System.out.println(message);
+                
                     if (onCloseCallBack != null) {
                         onCloseCallBack.accept(message);
                     }
-                    if (remote) {
+                
+                    // El servidor rechaza al cliente porque la partida está llena.
+                    if (code == 1013 || "Partida plena".equalsIgnoreCase(reason)) {
+                        reconnectEnabled = false;
+                        exitRequested.set(true);
+                        scheduler.shutdownNow();
+                        return;
+                    }
+                
+                    if (remote && reconnectEnabled && !exitRequested.get()) {
                         scheduleReconnect();
                     }
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    String message = "WS connection error: " + e.getMessage();
-                    System.out.println(message);
+                    String errorMessage = "WS connection error: "
+                            + (e.getMessage() != null ? e.getMessage() : "Error desconocido");
+                
+                    System.out.println(errorMessage);
+                
                     if (onErrorCallBack != null) {
-                        onErrorCallBack.accept(message);
+                        onErrorCallBack.accept(errorMessage);
                     }
-                    if (e.getMessage().contains("Connection refused") || e.getMessage().contains("Connection reset")) {
+                
+                    if (!reconnectEnabled || exitRequested.get()) {
+                        return;
+                    }
+                
+                    // Solo reintentar automáticamente ante errores de conexión
+                    // que puedan ser temporales.
+                    String details = e.getMessage();
+                
+                    if (details != null
+                            && (details.contains("Connection refused")
+                                || details.contains("Connection reset"))) {
                         scheduleReconnect();
                     }
                 }
@@ -79,21 +106,27 @@ public class UtilsWS {
     }
 
     private void scheduleReconnect() {
-        if (!exitRequested.get()) {
+        if (reconnectEnabled && !exitRequested.get()) {
             scheduler.schedule(this::reconnect, 5, TimeUnit.SECONDS);
         }
     }
 
     private void reconnect() {
-        if (exitRequested.get()) {
+        if (exitRequested.get() || !reconnectEnabled) {
             return;
         }
 
         System.out.println("WS reconnecting to: " + this.location);
 
-        if (client != null) {
+        if (client != null && !client.isClosed()) {
             client.close();
         }
+
+        // Comprobar otra vez antes de crear una conexión nueva.
+        if (exitRequested.get() || !reconnectEnabled) {
+            return;
+        }
+
         createNewWebSocketClient();
     }
 
@@ -125,8 +158,11 @@ public class UtilsWS {
             if (client != null && client.isOpen()) {
                 client.send(text);
             } else {
-                System.out.println("WS Error: Client is not connected. Attempting to reconnect...");
-                scheduleReconnect();
+                System.out.println("WS Error: Client is not connected.");
+            
+                if (reconnectEnabled && !exitRequested.get()) {
+                    scheduleReconnect();
+                }
             }
         } catch (Exception e) {
             System.out.println("WS Error sending message: " + e.getMessage());
@@ -153,6 +189,15 @@ public class UtilsWS {
     }
 
     public void connect() {
+        reconnectEnabled = true;
         createNewWebSocketClient();
+    }
+
+    public void disconnectIntentional() {
+        reconnectEnabled = false;
+
+        if (client != null && client.isOpen()) {
+            client.close(1000, "Partida terminada");
+        }
     }
 }

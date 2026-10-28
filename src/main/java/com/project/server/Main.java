@@ -4,9 +4,12 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,8 +39,6 @@ public class Main extends WebSocketServer {
 
     private static final int TICK_FPS = 60;
 
-    private static final int RESTART_DELAY_SECONDS = 3;
-
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
     private static final String K_CLIENT_NAME = "clientName";
@@ -62,6 +63,12 @@ public class Main extends WebSocketServer {
     private volatile boolean countdownRunning = false;
 
     private final ScheduledExecutorService ticker;
+
+    private volatile int countdownGeneration = 0;
+
+    private volatile boolean endingGame = false;
+
+    private final Set<WebSocket> endingSockets = new HashSet<>();
 
     private long lastTickNanos = 0;
 
@@ -89,60 +96,99 @@ public class Main extends WebSocketServer {
 
     // compte enrere que inicia la partida
     private void sendCountdown() {
+        final int generation;
+    
         synchronized (this) {
-            if (countdownRunning) {
+            if (endingGame || countdownRunning) {
                 return;
             }
+        
             if (clients.snapshot().size() != REQUIRED_CLIENTS) {
                 return;
             }
+        
             countdownRunning = true;
+            generation = ++countdownGeneration;
         }
-
+    
         new Thread(() -> {
-            boolean completed = true;
+            boolean completed = false;
+        
             try {
                 for (int i = 5; i >= 0; i--) {
-                    if (clients.snapshot().size() < REQUIRED_CLIENTS) {
-                        completed = false;
-                        break; // si es desconecta un client es cancela el compte enrere
+                    synchronized (this) {
+                        if (generation != countdownGeneration
+                                || endingGame
+                                || clients.snapshot().size() != REQUIRED_CLIENTS) {
+                            return;
+                        }
                     }
+                
                     sendCountdownToAll(i);
+                
                     if (i > 0) {
                         Thread.sleep(750);
                     }
                 }
-            } catch (InterruptedException ie) {
-                completed = false;
-                Thread.currentThread().interrupt();
-            } finally {
-                countdownRunning = false;
-            }
-
-            if (completed) {
+            
                 List<Map.Entry<WebSocket, String>> connectedPlayers =
                         new ArrayList<>(clients.snapshot().entrySet());
             
-                connectedPlayers.sort(
-                        (a, b) -> Integer.compare(
-                                clients.playerNumber(a.getKey()),
-                                clients.playerNumber(b.getKey())
-                        )
-                );
-            
-                List<String> names = new ArrayList<>();
-            
-                for (Map.Entry<WebSocket, String> player : connectedPlayers) {
-                    names.add(player.getValue());
+                if (connectedPlayers.size() != REQUIRED_CLIENTS) {
+                    return;
                 }
             
-                game.start(names, name -> {
-                    WebSocket socket = clients.socketByName(name);
-                    return getColorForSocket(socket);
-                });
+                connectedPlayers.sort((a, b) -> Integer.compare(
+                        clients.playerNumber(a.getKey()),
+                        clients.playerNumber(b.getKey())
+                ));
             
-                broadcastGameStart();
+                List<String> names = new ArrayList<>();
+                Map<String, String> colorsByName = new HashMap<>();
+            
+                for (Map.Entry<WebSocket, String> player : connectedPlayers) {
+                    WebSocket socket = player.getKey();
+                    String name = player.getValue();
+                
+                    if (socket == null || !socket.isOpen()
+                            || name == null || name.isBlank()) {
+                        return;
+                    }
+                
+                    names.add(name);
+                    colorsByName.put(name, getColorForSocket(socket));
+                }
+            
+                synchronized (this) {
+                    if (generation != countdownGeneration
+                            || endingGame
+                            || clients.snapshot().size() != REQUIRED_CLIENTS) {
+                        return;
+                    }
+                
+                    game.start(names, name -> colorsByName.getOrDefault(name, "GRAY"));
+                    broadcastGameStart();
+                    completed = true;
+                }
+            
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            
+            } catch (Exception e) {
+                e.printStackTrace();
+            
+            } finally {
+                synchronized (this) {
+                    if (generation == countdownGeneration) {
+                        countdownRunning = false;
+                    }
+                }
             }
+        
+            if (!completed) {
+                System.out.println("Compte enrere cancel·lat o partida no iniciada.");
+            }
+        
         }, "CountdownThread").start();
     }
 
@@ -215,7 +261,48 @@ public class Main extends WebSocketServer {
     }
 
     private void broadcastGameOver(String winner) {
-        broadcastExcept(null, msg(T_GAME_OVER).put(K_WINNER, winner).toString());
+        synchronized (this) {
+            if (endingGame) {
+                return;
+            }
+
+            endingGame = true;
+            countdownGeneration++;
+            countdownRunning = false;
+        }
+
+        String loser = game.getLoser(winner);
+
+        JSONObject result = msg(T_GAME_OVER)
+                .put(K_WINNER, winner)
+                .put("loser", loser);
+
+        String message = result.toString();
+
+        // Guardem les connexions d'aquesta partida.
+        List<WebSocket> socketsToClose =
+                new ArrayList<>(clients.snapshot().keySet());
+
+        synchronized (this) {
+            endingSockets.clear();
+            endingSockets.addAll(socketsToClose);
+        }
+
+        for (WebSocket socket : socketsToClose) {
+            sendSafe(socket, message);
+        }
+
+        System.out.println("Partida terminada.");
+        System.out.println("Ganador: " + winner);
+        System.out.println("Perdedor: " + loser);
+
+        ticker.schedule(() -> {
+            for (WebSocket socket : socketsToClose) {
+                if (socket != null && socket.isOpen()) {
+                    socket.close(1000, "Partida terminada");
+                }
+            }
+        }, 500, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -232,14 +319,41 @@ public class Main extends WebSocketServer {
         sendCountdown();
     }
 
+
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+        // Si el socket no estaba registrado, era una conexión rechazada
+        // o una conexión que ya había sido eliminada.
         String name = clients.remove(conn);
-        if (name != null) {
-            game.removePlayer(name);
-            System.out.println("WebSocket client disconnected: " + name);
-            broadcastLobby();
+
+        if (name == null) {
+            System.out.println(
+                    "Conexión no registrada cerrada. No se modifica la partida."
+            );
+            return;
         }
+
+        synchronized (this) {
+            countdownGeneration++;
+            countdownRunning = false;
+
+            // Solo se modifica el seguimiento del final de partida
+            // si esta conexión pertenecía a la partida que terminaba.
+            if (endingSockets.remove(conn)) {
+                if (endingSockets.isEmpty()) {
+                    endingGame = false;
+                }
+            }
+        }
+
+        game.removePlayer(name);
+
+        System.out.println("WebSocket client disconnected: " + name);
+        broadcastLobby();
+
+        // No iniciamos el contador desde onClose().
+        // El contador se inicia cuando se conecta el segundo jugador
+        // válido, mediante onOpen() y sendCountdown().
     }
 
     @Override
@@ -326,11 +440,11 @@ public class Main extends WebSocketServer {
                     broadcastState(snapshot);
                 }
 
-                // si algu guanya acaba la partida i comená un altre
+                // Si alguien gana, termina la partida
                 String winner = game.consumeWinner();
+
                 if (winner != null) {
                     broadcastGameOver(winner);
-                    ticker.schedule(this::sendCountdown, RESTART_DELAY_SECONDS, TimeUnit.SECONDS);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

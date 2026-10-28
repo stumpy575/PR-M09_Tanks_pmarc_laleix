@@ -34,7 +34,7 @@ public class CtrlConfig implements Initializable {
     }
 
     @FXML
-    private void connectToServer() {
+    public void connectToServer() {
 
         // Obtener los datos introducidos
         String protocol = txtProtocol.getText().trim();
@@ -134,7 +134,13 @@ public class CtrlConfig implements Initializable {
 
                 // Fin de la partida
                 else if ("gameOver".equals(obj.optString("type"))) {
-                    Main.ctrlPlay.showGameOver(obj.optString("winner"));
+                
+                    String winner = obj.optString("winner");
+                    String loser = obj.optString("loser");
+                
+                    Main.ctrlResults.showResults(winner, loser);
+
+                    Main.wsClient.disconnectIntentional();
                 }
 
                 // Cuando el servidor indique que empieza la partida
