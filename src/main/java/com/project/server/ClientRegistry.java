@@ -193,7 +193,11 @@ final class ClientRegistry {
         return arr;
     }
 
-    int playerNumber(WebSocket socket) {
+    public int playerNumber(WebSocket socket) {
+        if (socket == null) {
+            return -1;
+        }
+
         return playerNumbers.getOrDefault(socket, -1);
     }
 
