@@ -1,7 +1,6 @@
 package com.project.server.game;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -18,12 +17,44 @@ public class GameWorld {
     // nombre de passos petits en que es divideix cada actualitzacio per a que els objectes no es saltin colisions
     private static final int PHYSICS_PRECISION = 10;
 
-    private static final List<Rect> OBSTACLE_OPTIONS = List.of(
-        new Rect(260, 100, 60, 100),
-        new Rect(260, 300, 60, 100),
-        new Rect(370, 170, 60, 160),
-        new Rect(480, 100, 60, 100),
-        new Rect(480, 300, 60, 100)
+// el format de definicio dels rectangles es posicio x, posicio y, omplada i altura
+    private static final List<List<Rect>> SCENARIOS = List.of(
+            // mapa amb 4 obstacles
+            List.of(
+                    new Rect(250, 80, 110, 130),
+                    new Rect(440, 80, 110, 130),
+                    new Rect(250, 290, 110, 130),
+                    new Rect(440, 290, 110, 130)
+            ),
+            // mapa amb corridors
+            List.of(
+                    new Rect(130, 80, 20, 210),
+                    new Rect(130, 80, 270, 20),
+                    new Rect(240, 190, 20, 100),
+                    new Rect(240, 190, 160, 20),
+
+                    new Rect(650, 210, 20, 210),
+                    new Rect(400, 400, 270, 20),
+                    new Rect(540, 210, 20, 100),
+                    new Rect(400, 290, 160, 20)
+            ),
+            // mapa laberint
+            List.of(
+        new Rect(130,  80, 140,  50),
+        new Rect(130, 190,  40, 110),
+        new Rect(230, 190,  40, 230),
+        new Rect(130, 360, 140,  60),
+
+        new Rect(330,  80, 140,  50),
+        new Rect(330,  80,  40, 210),
+        new Rect(430, 210,  40, 210),
+        new Rect(330, 370, 140,  50),
+
+        new Rect(530, 100,  40, 200),
+        new Rect(630, 190,  40, 110),
+        new Rect(630,  80,  40,  50),
+        new Rect(530, 360, 140,  60)
+            )
     );
 
     private final List<Rect> walls = new ArrayList<>();
@@ -41,9 +72,7 @@ public class GameWorld {
         walls.add(new Rect(0, 0, WALL, HEIGHT));
         walls.add(new Rect(WIDTH - WALL, 0, WALL, HEIGHT));
 
-        List<Rect> options = new ArrayList<>(OBSTACLE_OPTIONS);
-        Collections.shuffle(options, random);
-        obstacles.addAll(options.subList(0, 2));
+        obstacles.addAll(SCENARIOS.get(random.nextInt(SCENARIOS.size())));
 
         solids.addAll(walls);
         solids.addAll(obstacles);
@@ -58,12 +87,25 @@ public class GameWorld {
         tanks.add(second);
     }
 
-    public List<Rect> getWalls() { return walls; }
-    public List<Rect> getObstacles() { return obstacles; }
-    public List<Tank> getTanks() { return tanks; }
-    public List<Bullet> getBullets() { return bullets; }
+    public List<Rect> getWalls() {
+        return walls;
+    }
 
-    public int getDestroyedTank() { return destroyedTank; }
+    public List<Rect> getObstacles() {
+        return obstacles;
+    }
+
+    public List<Tank> getTanks() {
+        return tanks;
+    }
+
+    public List<Bullet> getBullets() {
+        return bullets;
+    }
+
+    public int getDestroyedTank() {
+        return destroyedTank;
+    }
 
     public List<Explosion> drainExplosions() {
         List<Explosion> copy = new ArrayList<>(explosions);
@@ -72,7 +114,6 @@ public class GameWorld {
     }
 
     // --- Entrada dels jugadors ---
-
     public void setInput(int player, int dx, int dy, double aimX, double aimY) {
         Tank tank = tanks.get(player);
         tank.dx = Integer.signum(dx);
@@ -82,8 +123,12 @@ public class GameWorld {
 
     public void fire(int player, double aimX, double aimY) {
         Tank tank = tanks.get(player);
-        if (destroyedTank >= 0 || !tank.alive) return;
-        if (countBullets(player) >= MAX_BULLETS) return;
+        if (destroyedTank >= 0 || !tank.alive) {
+            return;
+        }
+        if (countBullets(player) >= MAX_BULLETS) {
+            return;
+        }
 
         setAim(tank, aimX, aimY);
         tank.pointAtAim();
@@ -99,12 +144,15 @@ public class GameWorld {
 
     private int countBullets(int owner) {
         int n = 0;
-        for (Bullet b : bullets) if (b.owner == owner) n++;
+        for (Bullet b : bullets) {
+            if (b.owner == owner) {
+                n++;
+            }
+        }
         return n;
     }
 
     // --- Simulació ---
-
     // Avança la simulacio x segons
     public void tick(double dt) {
 
@@ -150,7 +198,9 @@ public class GameWorld {
     }
 
     private boolean isTankBlocked(Tank tank, double x, double y) {
-        if (touchesSolid(x, y, Tank.RADIUS)) return true;
+        if (touchesSolid(x, y, Tank.RADIUS)) {
+            return true;
+        }
         for (Tank other : tanks) {
             if (other != tank && other.alive
                     && Math.hypot(x - other.x, y - other.y) < Tank.RADIUS + Tank.RADIUS) {
@@ -162,7 +212,9 @@ public class GameWorld {
 
     private boolean touchesSolid(double x, double y, double radius) {
         for (Rect r : solids) {
-            if (r.touchesCircle(x, y, radius)) return true;
+            if (r.touchesCircle(x, y, radius)) {
+                return true;
+            }
         }
         return false;
     }
@@ -193,24 +245,26 @@ public class GameWorld {
             bullet.x = nextX;
             bullet.y = nextY;
 
-            if (destroyedTank >= 0) continue;
-                    
+            if (destroyedTank >= 0) {
+                continue;
+            }
+
             for (Tank tank : tanks) {
-            
+
                 if (!tank.alive || !bullet.touches(tank)) {
                     continue;
                 }
-            
+
                 if (tank.index != bullet.owner || bullet.bounced) {
-                
+
                     // El proyectil desaparece al impactar
                     toRemove.add(bullet);
-                
+
                     // Solo recibe daño si no es invulnerable
                     if (tank.invulnerabilityTimer <= 0) {
                         destroyTank(tank);
                     }
-                
+
                     break;
                 }
             }
@@ -221,7 +275,9 @@ public class GameWorld {
             for (int j = i + 1; j < bullets.size(); j++) {
                 Bullet a = bullets.get(i);
                 Bullet b = bullets.get(j);
-                if (toRemove.contains(a) || toRemove.contains(b)) continue;
+                if (toRemove.contains(a) || toRemove.contains(b)) {
+                    continue;
+                }
                 if (a.touches(b)) {
                     toRemove.add(a);
                     toRemove.add(b);
@@ -234,14 +290,14 @@ public class GameWorld {
     }
 
     private void destroyTank(Tank tank) {
-    
+
         tank.takeDamage();
-    
+
         if (!tank.alive) {
             if (destroyedTank < 0) {
                 destroyedTank = tank.index;
             }
-        
+
             addExplosion(tank.x, tank.y, 60);
         } else {
             addExplosion(tank.x, tank.y, 30);
