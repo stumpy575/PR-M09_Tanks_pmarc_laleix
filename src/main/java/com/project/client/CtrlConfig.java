@@ -152,11 +152,12 @@ public class CtrlConfig implements Initializable {
                         "DEBUG: gameStart recibido. playerNumber = " + playerNumber
                     );
                 
+                    String mapName = obj.optString("mapName", "");
                     JSONArray walls = obj.optJSONArray("walls");
                     JSONArray obstacles = obj.optJSONArray("obstacles");
 
                     Platform.runLater(() -> {
-                        Main.ctrlPlay.startGame(playerNumber, walls, obstacles);
+                        Main.ctrlPlay.startGame(playerNumber, mapName, walls, obstacles);
                         UtilsViews.setView("ViewPlay");
                     });
                 }

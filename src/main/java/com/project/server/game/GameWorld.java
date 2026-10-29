@@ -32,7 +32,6 @@ public class GameWorld {
                     new Rect(130, 80, 270, 20),
                     new Rect(240, 190, 20, 100),
                     new Rect(240, 190, 160, 20),
-
                     new Rect(650, 210, 20, 210),
                     new Rect(400, 400, 270, 20),
                     new Rect(540, 210, 20, 100),
@@ -40,21 +39,23 @@ public class GameWorld {
             ),
             // mapa laberint
             List.of(
-        new Rect(130,  80, 140,  50),
-        new Rect(130, 190,  40, 110),
-        new Rect(230, 190,  40, 230),
-        new Rect(130, 360, 140,  60),
-
-        new Rect(330,  80, 140,  50),
-        new Rect(330,  80,  40, 210),
-        new Rect(430, 210,  40, 210),
-        new Rect(330, 370, 140,  50),
-
-        new Rect(530, 100,  40, 200),
-        new Rect(630, 190,  40, 110),
-        new Rect(630,  80,  40,  50),
-        new Rect(530, 360, 140,  60)
+                    new Rect(130, 80, 140, 50),
+                    new Rect(130, 190, 40, 110),
+                    new Rect(230, 190, 40, 230),
+                    new Rect(130, 360, 140, 60),
+                    new Rect(330, 80, 140, 50),
+                    new Rect(330, 80, 40, 210),
+                    new Rect(430, 210, 40, 210),
+                    new Rect(330, 370, 140, 50),
+                    new Rect(530, 100, 40, 200),
+                    new Rect(630, 190, 40, 110),
+                    new Rect(630, 80, 40, 50),
+                    new Rect(530, 360, 140, 60)
             )
+    );
+
+    private static final List<String> SCENARIO_NAMES = List.of(
+            "Obstacles", "Corridors", "Labyrinth"
     );
 
     private final List<Rect> walls = new ArrayList<>();
@@ -64,6 +65,9 @@ public class GameWorld {
     private final List<Bullet> bullets = new ArrayList<>();
     private final List<Explosion> explosions = new ArrayList<>();
 
+    private final int scenarioIndex;
+    private final String mapName;
+
     private int destroyedTank = -1; // index del primer tanc mort, -1 es cap
 
     public GameWorld(Random random) {
@@ -72,7 +76,9 @@ public class GameWorld {
         walls.add(new Rect(0, 0, WALL, HEIGHT));
         walls.add(new Rect(WIDTH - WALL, 0, WALL, HEIGHT));
 
-        obstacles.addAll(SCENARIOS.get(random.nextInt(SCENARIOS.size())));
+        scenarioIndex = random.nextInt(SCENARIOS.size());
+        mapName = SCENARIO_NAMES.get(scenarioIndex);
+        obstacles.addAll(SCENARIOS.get(scenarioIndex));
 
         solids.addAll(walls);
         solids.addAll(obstacles);
@@ -105,6 +111,10 @@ public class GameWorld {
 
     public int getDestroyedTank() {
         return destroyedTank;
+    }
+
+    public String getMapName() {
+        return mapName;
     }
 
     public List<Explosion> drainExplosions() {

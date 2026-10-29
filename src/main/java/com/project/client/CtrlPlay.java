@@ -76,12 +76,13 @@ public class CtrlPlay implements Initializable {
 
     // --- Inici de partida ---
 
-    public void startGame(int playerNumber, JSONArray walls, JSONArray obstacles) {
+    public void startGame(int playerNumber, String mapName, JSONArray walls, JSONArray obstacles) {
         if (playerNumber != 0 && playerNumber != 1) {
             System.out.println("Número de jugador no válido: " + playerNumber);
             return;
         }
         this.playerNumber = playerNumber;
+        txtMap.setText(mapName);
 
         staticObjects.clear();
         addRects(walls, Color.DIMGRAY);

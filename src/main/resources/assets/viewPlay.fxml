@@ -19,7 +19,7 @@
                         <Font name="System Bold" size="25.0" />
                      </font>
                   </Label>
-                  <Label fx:id="txtMap" alignment="CENTER" contentDisplay="CENTER" prefWidth="67.0" text="MAP" textAlignment="CENTER">
+                  <Label fx:id="txtMap" alignment="CENTER" contentDisplay="CENTER" text="MAP" textAlignment="CENTER">
                      <font>
                         <Font size="25.0" />
                      </font>

@@ -238,7 +238,8 @@ public class Main extends WebSocketServer {
             JSONObject rst = msg(T_GAME_START)
                     .put("playerNumber", clients.playerNumber(socket))
                     .put("walls", layout.optJSONArray("walls"))
-                    .put("obstacles", layout.optJSONArray("obstacles"));
+                    .put("obstacles", layout.optJSONArray("obstacles"))
+                    .put("mapName", layout.optString("mapName", ""));
 
             sendSafe(socket, rst.toString());
         }

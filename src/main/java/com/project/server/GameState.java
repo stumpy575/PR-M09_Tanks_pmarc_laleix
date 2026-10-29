@@ -94,6 +94,7 @@ public class GameState {
     public synchronized JSONObject layoutToJSON() {
         JSONObject json = new JSONObject();
         if (world != null) {
+            json.put("mapName", world.getMapName());
             json.put("walls", rectsToJSON(world.getWalls()));
             json.put("obstacles", rectsToJSON(world.getObstacles()));
         }
