@@ -33,4 +33,11 @@ public class CtrlResults {
     private void connectToServer() {
         Main.ctrlConfig.connectToServer();
     }
+
+    @FXML
+    private void returnToMenu() {
+        Platform.runLater(() -> {
+            UtilsViews.setView("ViewConfig");
+        });
+    }
 }

@@ -68,19 +68,20 @@ public class CtrlConfig implements Initializable {
 
         // Cuando se conecte correctamente
         Main.wsClient.onOpen(message -> {
-
-            // Enviar al servidor el nombre elegido por el jugador
+        
+            // Enviar el nombre elegido por el jugador al servidor
             JSONObject nameMessage = new JSONObject()
                 .put("type", "setName")
                 .put("value", Main.playerName);
-
+        
             Main.wsClient.safeSend(nameMessage.toString());
         
             Platform.runLater(() -> {
             
-                txtMessage.setText("Conectado correctamente");
+                // Solo mostrar el mensaje de conexión.
+                // Todavía no cambiamos de ventana.
             
-                UtilsViews.setView("ViewWait");
+                txtMessage.setText("Conectado correctamente");
             
             });
         
@@ -105,11 +106,27 @@ public class CtrlConfig implements Initializable {
                             players[i] = playersArray.optString(i);
                         }
                     
-                        if (Main.ctrlWait != null) {
-                            Main.ctrlWait.updatePlayers(players);
-                        }
+                        Platform.runLater(() -> {
+                        
+                            // Entrar en ViewWait si venimos de configuración
+                            // o de la pantalla de resultados.
+                            String activeView = UtilsViews.getActiveView();
+                        
+                            if ("ViewConfig".equals(activeView) || "ViewResults".equals(activeView)) {
+                                    
+                                txtMessage.setText("Conectado correctamente");
+                                    
+                                UtilsViews.setView("ViewWait");
+                            }
+                        
+                            // Actualizar los jugadores de la sala
+                            if (Main.ctrlWait != null) {
+                                Main.ctrlWait.updatePlayers(players);
+                            }
+                        
+                        });
                     }
-                } 
+                }
                 // Procesar la cuenta atrás
                 else if ("countdown".equals(obj.optString("type"))) {
 
@@ -185,7 +202,14 @@ public class CtrlConfig implements Initializable {
         
             Platform.runLater(() -> {
             
-                txtMessage.setText("Conexión cerrada");
+                if (message != null && message.contains("Código: 1013")) {
+                    txtMessage.setText("El servidor está lleno. Inténtalo de nuevo más tarde.");
+                
+                    UtilsViews.setView("ViewConfig");
+                
+                } else {
+                    txtMessage.setText("Conexión cerrada");
+                }
             
             });
         

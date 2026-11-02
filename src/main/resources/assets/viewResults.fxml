@@ -21,13 +21,19 @@
                   <Insets top="16.0" />
                </VBox.margin>
             </Label>
-            <Pane prefHeight="103.0" prefWidth="600.0" VBox.vgrow="ALWAYS" />
-            <Button mnemonicParsing="false" onAction="#connectToServer" text="Volver a jugar" VBox.vgrow="NEVER">
+            <Pane prefHeight="169.0" prefWidth="600.0" VBox.vgrow="ALWAYS" />
+            <Button mnemonicParsing="false" onAction="#connectToServer" text="Play Again" VBox.vgrow="NEVER">
                <VBox.margin>
                   <Insets top="16.0" />
                </VBox.margin>
                <font>
-                  <Font size="20.0" />
+                  <Font size="28.0" />
+               </font>
+            </Button>
+            <Pane prefHeight="83.0" prefWidth="600.0" />
+            <Button layoutX="236.0" layoutY="309.0" mnemonicParsing="false" onAction="#returnToMenu" text="Return to menu">
+               <font>
+                  <Font size="14.0" />
                </font>
             </Button>
             <Pane prefHeight="177.0" prefWidth="600.0" />
